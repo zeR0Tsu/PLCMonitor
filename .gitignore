@@ -5,6 +5,9 @@ node_modules/
 data/
 *.db
 
+# 项目文档（存储在 docs 分支）
+docs/
+
 # 本地配置（含测试 PLC 地址）
 config.json
 
