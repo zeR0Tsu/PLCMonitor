@@ -1,0 +1,9 @@
+{
+  "server": {
+    "port": 3000,
+    "lanBind": "0.0.0.0"
+  },
+  "plcs": [],
+  "variables": [],
+  "charts": []
+}
