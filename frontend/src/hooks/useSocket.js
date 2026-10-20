@@ -9,7 +9,7 @@ const DEFAULT_TIMEOUT = 8000;
  */
 export default function useSocket() {
   const socketRef = useRef(null);
-  const [connected, setConnected] = useState(false);
+  const [connected, setConnected] = useState(null);
   const [connectionStatuses, setConnectionStatuses] = useState([]);
   const listenersRef = useRef(new Map());
 

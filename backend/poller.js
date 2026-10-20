@@ -19,6 +19,7 @@ class Poller {
     this._timers = new Map();
     this._failures = new Map();
     this._lastStoredAt = new Map();
+    this._manualDisconnects = new Set();
     this._intervalMs = 100;
     this._simulation = false;
 
@@ -48,6 +49,7 @@ class Poller {
     for (const [plcId, client] of this._plcClients) {
       if (keepIds.has(plcId)) continue;
       this._stopPolling(plcId);
+      this._manualDisconnects.add(plcId);
       client.disconnect();
       this._plcClients.delete(plcId);
       this._plcVariables.delete(plcId);
@@ -72,13 +74,17 @@ class Poller {
       } else {
         if (existing) {
           this._stopPolling(plc.id);
+          this._manualDisconnects.add(plc.id);
           existing.disconnect();
         }
         const client = this._createClient(plc);
         this._plcClients.set(plc.id, client);
         this._plcSignatures.set(plc.id, signature);
         client.on('connect', () => this.notifier.updateStatus(plc.id, true));
-        client.on('disconnect', () => this.notifier.updateStatus(plc.id, false, '已断开'));
+        client.on('disconnect', () => {
+          if (this._manualDisconnects.delete(plc.id)) return;
+          this.notifier.updateStatus(plc.id, false, '已断开');
+        });
       }
 
       this._plcVariables.set(plc.id, varMap.get(plc.id) || []);
@@ -127,6 +133,7 @@ class Poller {
     const client = this._plcClients.get(plcId);
     if (!client) return;
     this._stopPolling(plcId);
+    this._manualDisconnects.add(plcId);
     client.disconnect();
     this._failures.delete(plcId);
     this.notifier.updateStatus(plcId, false, '已手动断开');

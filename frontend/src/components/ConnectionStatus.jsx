@@ -1,49 +1,38 @@
 import React from 'react';
+import { colors, radius } from '../styles/theme';
 
 const styles = {
+  stack: {
+    display: 'flex',
+    flexDirection: 'column',
+    flexShrink: 0,
+  },
   bar: {
     display: 'flex',
     alignItems: 'center',
-    gap: '16px',
-    padding: '6px 16px',
-    fontSize: '12px',
-    backgroundColor: '#fafafa',
-    borderBottom: '1px solid #e0e0e0',
-  },
-  dot: {
-    width: '8px',
-    height: '8px',
-    borderRadius: '50%',
-    display: 'inline-block',
-    marginRight: '4px',
-  },
-  plcItem: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '4px',
-  },
-  alertBar: {
-    display: 'flex',
-    alignItems: 'center',
     gap: '8px',
-    padding: '8px 16px',
-    backgroundColor: '#fff3e0',
-    color: '#e65100',
-    fontSize: '13px',
-    borderBottom: '1px solid #ffe0b2',
-  },
-  alertIcon: {
-    fontSize: '16px',
-  },
-  reconnectBtn: {
-    marginLeft: 'auto',
-    padding: '4px 12px',
+    padding: '8px 20px',
+    backgroundColor: colors.warningSoft,
+    borderBottom: '1px solid #fedf89',
+    color: '#93370d',
     fontSize: '12px',
-    border: '1px solid #e65100',
-    borderRadius: '4px',
-    background: '#fff',
-    color: '#e65100',
-    cursor: 'pointer',
+  },
+  errorBar: {
+    backgroundColor: colors.dangerSoft,
+    borderBottom: '1px solid #fecdca',
+    color: '#912018',
+  },
+  badge: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    height: '20px',
+    padding: '0 7px',
+    borderRadius: radius.sm,
+    backgroundColor: 'rgba(255,255,255,0.7)',
+    border: '1px solid rgba(0,0,0,0.06)',
+    fontSize: '11px',
+    fontWeight: 500,
+    flexShrink: 0,
   },
 };
 
@@ -53,38 +42,21 @@ export default function ConnectionStatus({ connectionStatuses, socketConnected, 
     (s) => !s.connected && s.error && s.error !== '已手动断开'
   );
 
+  if (socketConnected !== false && disconnected.length === 0) return null;
+
   return (
-    <>
-      <div style={styles.bar}>
-        <span>Socket: </span>
-        <span style={{
-          ...styles.dot,
-          backgroundColor: socketConnected ? '#4CAF50' : '#F44336',
-        }} />
-        <span>{socketConnected ? '已连接' : '断开'}</span>
-
-        {connectionStatuses.map((status) => (
-          <div key={status.plcId} style={styles.plcItem}>
-            <span style={{
-              ...styles.dot,
-              backgroundColor: status.connected ? '#4CAF50' : '#F44336',
-            }} />
-            <span>{plcName(status.plcId)}</span>
-          </div>
-        ))}
-      </div>
-
-      {disconnected.length > 0 && (
-        <div style={styles.alertBar}>
-          <span style={styles.alertIcon}>!</span>
-          <span>
-            {disconnected.map((d) => plcName(d.plcId)).join(', ')} 连接已断开
-            {disconnected[0]?.error && disconnected[0].error !== '已手动断开' && (
-              <span style={{ marginLeft: '8px', color: '#bf360c' }}>- {disconnected[0].error}</span>
-            )}
-          </span>
+    <div style={styles.stack}>
+      {socketConnected === false && (
+        <div style={styles.bar}>
+          <span>实时服务连接已断开，正在自动重连...</span>
         </div>
       )}
-    </>
+      {disconnected.length > 0 && (
+        <div style={{ ...styles.bar, ...styles.errorBar }}>
+          <span style={styles.badge}>{disconnected.map((d) => plcName(d.plcId)).join('、')}</span>
+          <span>{disconnected[0]?.error || '连接已断开'}</span>
+        </div>
+      )}
+    </div>
   );
 }

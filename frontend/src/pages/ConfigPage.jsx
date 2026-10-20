@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { colors, radius, header, brand, brandMark, button } from '../styles/theme';
 
 const styles = {
   container: {
@@ -6,71 +7,57 @@ const styles = {
     flexDirection: 'column',
     height: '100vh',
     overflow: 'hidden',
+    backgroundColor: colors.bg,
   },
-  topBar: {
+  headerLeft: {
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: '8px 16px',
-    backgroundColor: '#1a237e',
-    color: '#fff',
-    fontSize: '14px',
+    gap: '14px',
   },
-  topBarTitle: {
-    fontSize: '16px',
-    fontWeight: 600,
+  divider: {
+    width: '1px',
+    height: '20px',
+    backgroundColor: colors.border,
   },
-  topBarActions: {
-    display: 'flex',
-    gap: '8px',
-    alignItems: 'center',
-  },
-  btn: {
-    padding: '6px 16px',
-    border: '1px solid rgba(255,255,255,0.3)',
-    borderRadius: '4px',
-    background: 'transparent',
-    color: '#fff',
-    cursor: 'pointer',
+  headerSection: {
     fontSize: '13px',
-    transition: 'background 0.2s',
-  },
-  btnPrimary: {
-    backgroundColor: '#fff',
-    color: '#1a237e',
-    border: 'none',
+    color: colors.textSecondary,
   },
   body: {
     flex: 1,
     overflow: 'auto',
-    padding: '24px',
+    padding: '28px 24px 40px',
+  },
+  contentWrap: {
+    width: '100%',
+    maxWidth: '1080px',
+    margin: '0 auto',
   },
   tabBar: {
     display: 'flex',
-    gap: '0',
-    borderBottom: '2px solid #1a237e',
-    marginBottom: '24px',
+    gap: '24px',
+    borderBottom: `1px solid ${colors.border}`,
+    marginBottom: '20px',
   },
   tab: {
-    padding: '10px 24px',
+    padding: '0 0 10px',
     cursor: 'pointer',
-    fontSize: '14px',
+    fontSize: '13px',
     fontWeight: 500,
-    color: '#666',
+    color: colors.textMuted,
     borderBottom: '2px solid transparent',
-    marginBottom: '-2px',
-    transition: 'all 0.2s',
+    marginBottom: '-1px',
   },
   tabActive: {
-    color: '#1a237e',
-    borderBottomColor: '#1a237e',
+    color: colors.text,
+    borderBottomColor: colors.text,
     fontWeight: 600,
   },
   section: {
-    background: '#fff',
-    borderRadius: '8px',
-    padding: '20px',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+    background: colors.surface,
+    border: `1px solid ${colors.border}`,
+    borderRadius: radius.md,
+    padding: '18px 20px',
   },
   table: {
     width: '100%',
@@ -79,91 +66,103 @@ const styles = {
   },
   th: {
     textAlign: 'left',
-    padding: '10px 12px',
-    borderBottom: '2px solid #e0e0e0',
-    color: '#666',
+    padding: '8px 12px',
+    borderBottom: `1px solid ${colors.border}`,
+    color: colors.textMuted,
     fontWeight: 600,
-    fontSize: '12px',
-    textTransform: 'none',
+    fontSize: '11px',
+    letterSpacing: '0.04em',
+    textTransform: 'uppercase',
   },
   td: {
-    padding: '10px 12px',
-    borderBottom: '1px solid #f0f0f0',
+    padding: '12px',
+    borderBottom: '1px solid #f2f4f7',
+    color: colors.textSecondary,
   },
   actionBtn: {
-    padding: '4px 10px',
-    border: '1px solid #ddd',
-    borderRadius: '4px',
-    background: '#fff',
+    border: 'none',
+    background: 'transparent',
+    padding: 0,
+    marginRight: '14px',
     cursor: 'pointer',
     fontSize: '12px',
-    marginRight: '6px',
+    fontWeight: 500,
+    color: colors.accent,
   },
   actionBtnDanger: {
-    color: '#F44336',
-    borderColor: '#F44336',
+    color: colors.danger,
   },
   addBtn: {
-    marginTop: '12px',
-    padding: '8px 20px',
-    border: '1px dashed #1a237e',
-    borderRadius: '4px',
+    marginTop: '14px',
+    height: '32px',
+    padding: '0 14px',
+    border: `1px dashed ${colors.borderStrong}`,
+    borderRadius: radius.sm,
     background: 'transparent',
-    color: '#1a237e',
+    color: colors.textSecondary,
     cursor: 'pointer',
-    fontSize: '13px',
+    fontSize: '12px',
+    fontWeight: 500,
   },
   modalOverlay: {
     position: 'fixed',
-    top: 0, left: 0, right: 0, bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    inset: 0,
+    backgroundColor: 'rgba(16, 24, 40, 0.4)',
+    backdropFilter: 'blur(2px)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 1000,
   },
   modal: {
-    background: '#fff',
-    borderRadius: '12px',
-    padding: '24px',
-    width: '520px',
+    background: colors.surface,
+    border: `1px solid ${colors.border}`,
+    borderRadius: radius.lg,
+    padding: '22px',
+    width: '480px',
     maxWidth: '90vw',
-    maxHeight: '80vh',
+    maxHeight: '88vh',
     overflow: 'auto',
-    boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
+    boxShadow: '0 12px 32px rgba(16, 24, 40, 0.12)',
   },
   modalTitle: {
-    fontSize: '18px',
+    fontSize: '15px',
     fontWeight: 600,
-    marginBottom: '20px',
+    color: colors.text,
+    marginBottom: '18px',
   },
   formGroup: {
-    marginBottom: '16px',
+    marginBottom: '14px',
   },
   formLabel: {
     display: 'block',
-    fontSize: '13px',
+    fontSize: '12px',
     fontWeight: 500,
-    color: '#666',
+    color: colors.textSecondary,
     marginBottom: '6px',
   },
   formInput: {
     width: '100%',
-    padding: '8px 12px',
-    border: '1px solid #ddd',
-    borderRadius: '6px',
-    fontSize: '14px',
+    height: '34px',
+    padding: '0 10px',
+    border: `1px solid ${colors.borderStrong}`,
+    borderRadius: radius.sm,
+    fontSize: '13px',
+    color: colors.text,
     outline: 'none',
     boxSizing: 'border-box',
+    background: colors.surface,
   },
   formSelect: {
     width: '100%',
-    padding: '8px 12px',
-    border: '1px solid #ddd',
-    borderRadius: '6px',
-    fontSize: '14px',
+    height: '34px',
+    padding: '0 10px',
+    border: `1px solid ${colors.borderStrong}`,
+    borderRadius: radius.sm,
+    fontSize: '13px',
+    color: colors.text,
     outline: 'none',
-    background: '#fff',
+    background: colors.surface,
     boxSizing: 'border-box',
   },
   formRow: {
@@ -172,50 +171,49 @@ const styles = {
   },
   formRowItem: {
     flex: 1,
+    minWidth: 0,
   },
   modalActions: {
     display: 'flex',
     justifyContent: 'flex-end',
-    gap: '10px',
-    marginTop: '24px',
+    gap: '8px',
+    marginTop: '18px',
+    paddingTop: '14px',
+    borderTop: `1px solid ${colors.border}`,
+    position: 'sticky',
+    bottom: '-22px',
+    backgroundColor: colors.surface,
   },
   modalBtn: {
-    padding: '8px 24px',
-    borderRadius: '6px',
-    cursor: 'pointer',
-    fontSize: '14px',
-    border: '1px solid #ddd',
-    background: '#fff',
+    ...button.ghost,
   },
   modalBtnPrimary: {
-    backgroundColor: '#1a237e',
-    color: '#fff',
-    border: 'none',
+    ...button.primary,
   },
   chartCard: {
-    background: '#fafafa',
-    borderRadius: '8px',
-    padding: '16px',
-    marginBottom: '12px',
-    border: '1px solid #e0e0e0',
+    background: colors.surfaceMuted,
+    border: `1px solid ${colors.border}`,
+    borderRadius: radius.md,
+    padding: '14px 16px',
+    marginBottom: '10px',
   },
   chartCardTitle: {
-    fontSize: '15px',
+    fontSize: '13px',
     fontWeight: 600,
+    color: colors.text,
     marginBottom: '8px',
   },
   tag: {
     display: 'inline-block',
-    padding: '2px 8px',
-    borderRadius: '4px',
-    fontSize: '12px',
+    padding: '2px 7px',
+    borderRadius: radius.sm,
+    fontSize: '11px',
     marginRight: '4px',
     marginBottom: '4px',
-    backgroundColor: '#e3f2fd',
-    color: '#1565c0',
+    backgroundColor: colors.accentSoft,
+    color: colors.accent,
   },
 };
-
 const TABS = [
   { key: 'plcs', label: 'PLC 管理' },
   { key: 'variables', label: '变量管理' },
@@ -387,31 +385,31 @@ export default function ConfigPage({ onNavigate }) {
   };
 
   if (!config) {
-    return <div style={{ padding: '40px', textAlign: 'center', color: '#999' }}>加载中...</div>;
+    return <div style={{ padding: '40px', textAlign: 'center', color: colors.textMuted }}>加载中...</div>;
   }
-
-  const plcMap = {};
-  config.plcs.forEach((p) => { plcMap[p.id] = p; });
 
   const varMap = {};
   config.variables.forEach((v) => { varMap[v.id] = v; });
 
   return (
     <div style={styles.container}>
-      <div style={styles.topBar}>
-        <div style={styles.topBarTitle}>PLCMonitor - 配置</div>
-        <div style={styles.topBarActions}>
-          <button
-            style={{ ...styles.btn, ...styles.btnPrimary }}
-            onClick={() => onNavigate('dashboard')}
-          >
-            返回仪表板
-          </button>
+      <header style={header}>
+        <div style={styles.headerLeft}>
+          <div style={brand}>
+            <span style={brandMark}>PL</span>
+            PLCMonitor
+          </div>
+          <span style={styles.divider} />
+          <span style={styles.headerSection}>配置</span>
         </div>
-      </div>
+        <button style={button.ghost} onClick={() => onNavigate('dashboard')}>
+          返回仪表板
+        </button>
+      </header>
 
       <div style={styles.body}>
-        <div style={styles.tabBar}>
+        <div style={styles.contentWrap}>
+          <div style={styles.tabBar}>
           {TABS.map((tab) => (
             <div
               key={tab.key}
@@ -457,7 +455,7 @@ export default function ConfigPage({ onNavigate }) {
               </tbody>
             </table>
             {config.plcs.length === 0 && (
-              <div style={{ textAlign: 'center', color: '#999', padding: '20px' }}>
+              <div style={{ textAlign: 'center', color: colors.textMuted, padding: '20px' }}>
                 暂无 PLC 配置
               </div>
             )}
@@ -469,7 +467,7 @@ export default function ConfigPage({ onNavigate }) {
         {activeTab === 'variables' && (
           <div style={styles.section}>
             <div style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <label style={{ fontSize: '13px', fontWeight: 500, color: '#666' }}>选择 PLC：</label>
+              <label style={{ fontSize: '13px', fontWeight: 500, color: colors.textSecondary }}>选择 PLC：</label>
               <select
                 style={{ ...styles.formSelect, width: '240px' }}
                 value={selectedPlcId || ''}
@@ -515,14 +513,14 @@ export default function ConfigPage({ onNavigate }) {
                   </tbody>
                 </table>
                 {config.variables.filter((v) => v.plcId === selectedPlcId).length === 0 && (
-                  <div style={{ textAlign: 'center', color: '#999', padding: '20px' }}>
+                  <div style={{ textAlign: 'center', color: colors.textMuted, padding: '20px' }}>
                     该 PLC 暂无变量定义
                   </div>
                 )}
                 <button style={styles.addBtn} onClick={() => openVariableForm()}>+ 添加变量</button>
               </>
             ) : (
-              <div style={{ textAlign: 'center', color: '#999', padding: '20px' }}>
+              <div style={{ textAlign: 'center', color: colors.textMuted, padding: '20px' }}>
                 请先选择 PLC
               </div>
             )}
@@ -533,7 +531,7 @@ export default function ConfigPage({ onNavigate }) {
         {activeTab === 'charts' && (
           <div style={styles.section}>
             <div style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <label style={{ fontSize: '13px', fontWeight: 500, color: '#666' }}>选择 PLC：</label>
+              <label style={{ fontSize: '13px', fontWeight: 500, color: colors.textSecondary }}>选择 PLC：</label>
               <select
                 style={{ ...styles.formSelect, width: '240px' }}
                 value={selectedPlcId || ''}
@@ -558,7 +556,7 @@ export default function ConfigPage({ onNavigate }) {
                         </span>
                       ))}
                     </div>
-                    <div style={{ fontSize: '12px', color: '#999', marginBottom: '8px' }}>
+                    <div style={{ fontSize: '12px', color: colors.textMuted, marginBottom: '8px' }}>
                       时间窗口: {chart.timeWindow}s
                     </div>
                     <div>
@@ -568,19 +566,20 @@ export default function ConfigPage({ onNavigate }) {
                   </div>
                 ))}
                 {config.charts.filter((c) => c.plcId === selectedPlcId).length === 0 && (
-                  <div style={{ textAlign: 'center', color: '#999', padding: '20px' }}>
+                  <div style={{ textAlign: 'center', color: colors.textMuted, padding: '20px' }}>
                     该 PLC 暂无图表布局
                   </div>
                 )}
                 <button style={styles.addBtn} onClick={() => openChartForm()}>+ 添加图表</button>
               </>
             ) : (
-              <div style={{ textAlign: 'center', color: '#999', padding: '20px' }}>
+              <div style={{ textAlign: 'center', color: colors.textMuted, padding: '20px' }}>
                 请先选择 PLC
               </div>
             )}
           </div>
         )}
+        </div>
       </div>
 
       {/* ============ Modal ============ */}
@@ -711,7 +710,7 @@ export default function ConfigPage({ onNavigate }) {
                       value={form.yAxisMin ?? ''}
                       onChange={(e) => setForm({ ...form, yAxisMin: e.target.value })}
                     />
-                    <span style={{ color: '#999' }}>~</span>
+                    <span style={{ color: colors.textMuted }}>~</span>
                     <input
                       style={styles.formInput}
                       placeholder="最大值（留空自动）"
@@ -719,7 +718,7 @@ export default function ConfigPage({ onNavigate }) {
                       onChange={(e) => setForm({ ...form, yAxisMax: e.target.value })}
                     />
                   </div>
-                  <div style={{ fontSize: '12px', color: '#999', marginTop: '4px' }}>
+                  <div style={{ fontSize: '12px', color: colors.textMuted, marginTop: '4px' }}>
                     两个都填则固定范围；留空则自动适应数据
                   </div>
                 </div>
@@ -734,13 +733,13 @@ export default function ConfigPage({ onNavigate }) {
                           onChange={() => toggleChartVariable(v.id)}
                         />
                         <span>{v.name}</span>
-                        <span style={{ color: '#999', fontSize: '12px' }}>
+                        <span style={{ color: colors.textMuted, fontSize: '12px' }}>
                           ({v.addressType}{v.addressType === 'DB' ? ` DB${v.dbNumber}` : ''} +{v.offset})
                         </span>
                       </label>
                     ))}
                     {config.variables.filter((v) => v.plcId === (selectedPlcId || form.plcId)).length === 0 && (
-                      <div style={{ color: '#999', fontSize: '13px', textAlign: 'center', padding: '12px' }}>
+                      <div style={{ color: colors.textMuted, fontSize: '13px', textAlign: 'center', padding: '12px' }}>
                         该 PLC 暂无可用变量，请先在变量管理中添加
                       </div>
                     )}

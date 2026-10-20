@@ -4,6 +4,7 @@ import RealtimeChart from '../components/RealtimeChart';
 import ConnectionStatus from '../components/ConnectionStatus';
 import NotificationToast, { useToast } from '../components/NotificationToast';
 import { formatValue } from '../utils/chartOptions';
+import { colors, radius, header, brand, brandMark, button, select, dot } from '../styles/theme';
 
 // 30 分钟 @ 10Hz
 const MAX_POINTS = 18000;
@@ -15,33 +16,29 @@ const styles = {
     flexDirection: 'column',
     height: '100vh',
     overflow: 'hidden',
+    backgroundColor: colors.bg,
   },
-  topBar: {
+  headerLeft: {
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: '8px 16px',
-    backgroundColor: '#1a237e',
-    color: '#fff',
-    fontSize: '14px',
+    gap: '14px',
   },
-  topBarTitle: {
-    fontSize: '16px',
-    fontWeight: 600,
+  divider: {
+    width: '1px',
+    height: '20px',
+    backgroundColor: colors.border,
   },
-  topBarActions: {
+  headerRight: {
     display: 'flex',
-    gap: '8px',
     alignItems: 'center',
+    gap: '14px',
   },
-  btn: {
-    padding: '6px 16px',
-    border: '1px solid rgba(255,255,255,0.3)',
-    borderRadius: '4px',
-    background: 'transparent',
-    color: '#fff',
-    cursor: 'pointer',
-    fontSize: '13px',
+  socketBadge: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    fontSize: '12px',
+    color: colors.textSecondary,
   },
   body: {
     display: 'flex',
@@ -49,115 +46,159 @@ const styles = {
     overflow: 'hidden',
   },
   sidebar: {
-    width: '240px',
-    backgroundColor: '#fff',
-    borderRight: '1px solid #e0e0e0',
-    overflow: 'auto',
+    width: '264px',
+    backgroundColor: colors.surface,
+    borderRight: `1px solid ${colors.border}`,
+    display: 'flex',
+    flexDirection: 'column',
     flexShrink: 0,
+    overflow: 'hidden',
   },
-  sidebarToolbar: {
-    padding: '12px',
-    borderBottom: '1px solid #e0e0e0',
+  sidebarHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: '16px 16px 10px',
+    fontSize: '11px',
+    fontWeight: 600,
+    letterSpacing: '0.06em',
+    textTransform: 'uppercase',
+    color: colors.textMuted,
+  },
+  plcCard: {
+    margin: '0 12px 8px',
+    padding: '10px 12px',
+    border: `1px solid ${colors.border}`,
+    borderRadius: radius.md,
+    backgroundColor: colors.surfaceMuted,
+  },
+  plcCardTop: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: '8px',
+  },
+  plcName: {
     fontSize: '13px',
     fontWeight: 600,
-    color: '#666',
+    color: colors.text,
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
   },
-  treeItem: {
+  statusText: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '5px',
+    fontSize: '11px',
+    color: colors.textSecondary,
+  },
+  plcCardBottom: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: '8px',
+  },
+  plcAddress: {
+    fontSize: '11px',
+    color: colors.textMuted,
+    fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+  },
+  variableList: {
+    flex: 1,
+    overflowY: 'auto',
+    padding: '4px 8px 12px',
+  },
+  variableRow: {
     display: 'flex',
     alignItems: 'center',
     gap: '8px',
-    padding: '6px 12px 6px 28px',
+    height: '36px',
+    padding: '0 8px',
+    borderRadius: radius.sm,
     cursor: 'pointer',
     fontSize: '13px',
+    color: colors.textSecondary,
   },
-  treeItemSelected: {
-    backgroundColor: '#e3f2fd',
-    color: '#1565c0',
+  variableRowActive: {
+    color: colors.text,
   },
   checkbox: {
-    width: '16px',
-    height: '16px',
+    width: '14px',
+    height: '14px',
     cursor: 'pointer',
-    accentColor: '#1a237e',
+    accentColor: colors.text,
+    flexShrink: 0,
   },
-  contentArea: {
+  variableValue: {
+    marginLeft: 'auto',
+    fontSize: '12px',
+    fontWeight: 500,
+    color: colors.text,
+    fontVariantNumeric: 'tabular-nums',
+  },
+  sidebarEmpty: {
+    padding: '20px 16px',
+    color: colors.textMuted,
+    fontSize: '12px',
+    textAlign: 'center',
+    lineHeight: 1.7,
+  },
+  content: {
     flex: 1,
     display: 'flex',
     flexDirection: 'column',
-    overflow: 'auto',
-    padding: '16px',
+    overflowY: 'auto',
+    padding: '20px 24px 28px',
   },
-  chartToolbar: {
+  toolbar: {
     display: 'flex',
     alignItems: 'center',
     gap: '12px',
     marginBottom: '16px',
     flexWrap: 'wrap',
   },
-  timeBtn: {
-    padding: '4px 12px',
-    border: '1px solid #ddd',
-    borderRadius: '4px',
-    background: '#fff',
+  segmented: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    padding: '2px',
+    border: `1px solid ${colors.border}`,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface,
+  },
+  segBtn: {
+    height: '26px',
+    padding: '0 12px',
+    border: 'none',
+    borderRadius: radius.sm,
+    backgroundColor: 'transparent',
+    color: colors.textSecondary,
     cursor: 'pointer',
     fontSize: '12px',
-    transition: 'all 0.2s',
+    fontWeight: 500,
   },
-  timeBtnActive: {
-    backgroundColor: '#1a237e',
-    color: '#fff',
-    borderColor: '#1a237e',
+  segBtnActive: {
+    backgroundColor: colors.text,
+    color: '#ffffff',
   },
   emptyState: {
+    flex: 1,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    flex: 1,
-    color: '#999',
-    fontSize: '16px',
-  },
-  plcSelector: {
-    padding: '4px 12px',
-    border: '1px solid rgba(255,255,255,0.3)',
-    borderRadius: '4px',
-    background: '#1a237e',
-    color: '#fff',
+    color: colors.textMuted,
     fontSize: '13px',
-    outline: 'none',
-    cursor: 'pointer',
-  },
-  statusRow: {
-    padding: '8px 12px',
-    borderBottom: '1px solid #f0f0f0',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  connectBtn: {
-    padding: '2px 8px',
-    fontSize: '11px',
-    border: '1px solid #4CAF50',
-    borderRadius: '3px',
-    background: '#fff',
-    cursor: 'pointer',
-    color: '#4CAF50',
-  },
-  disconnectBtn: {
-    padding: '2px 8px',
-    fontSize: '11px',
-    border: '1px solid #ddd',
-    borderRadius: '3px',
-    background: '#fff',
-    cursor: 'pointer',
-    color: '#F44336',
+    border: `1px dashed ${colors.borderStrong}`,
+    borderRadius: radius.lg,
+    minHeight: '240px',
   },
 };
 
 const TIME_WINDOWS = [
-  { label: '30s', value: 30 },
-  { label: '1m', value: 60 },
-  { label: '5m', value: 300 },
-  { label: '30m', value: 1800 },
+  { label: '30 秒', value: 30 },
+  { label: '1 分钟', value: 60 },
+  { label: '5 分钟', value: 300 },
+  { label: '30 分钟', value: 1800 },
 ];
 
 function appendData(buffer, rows, timestamp) {
@@ -165,11 +206,7 @@ function appendData(buffer, rows, timestamp) {
     const vid = item.variableId;
     if (!buffer.has(vid)) buffer.set(vid, []);
     const arr = buffer.get(vid);
-    arr.push({
-      timestamp,
-      value: item.value,
-      quality: item.quality,
-    });
+    arr.push({ timestamp, value: item.value, quality: item.quality });
     if (arr.length > MAX_POINTS) arr.splice(0, arr.length - MAX_POINTS);
   }
 }
@@ -216,7 +253,6 @@ export default function Dashboard({ onNavigate }) {
     });
   }, []);
 
-  // 加载配置
   useEffect(() => {
     let cancelled = false;
     fetch('/api/config')
@@ -241,9 +277,8 @@ export default function Dashboard({ onNavigate }) {
     return () => { cancelled = true; };
   }, [addToast]);
 
-  // 拉取当前 PLC 的历史数据，填充较长时间窗口
   useEffect(() => {
-    if (!activePlcId || !socket.connected) return;
+    if (!activePlcId || !socket.connected) return undefined;
     let cancelled = false;
     const variables = (config?.variables || []).filter((v) => v.plcId === activePlcId);
     const end = Date.now();
@@ -265,7 +300,6 @@ export default function Dashboard({ onNavigate }) {
     return () => { cancelled = true; };
   }, [activePlcId, config, socket.connected, socket.requestHistory, mergeHistory]);
 
-  // 接收实时数据
   useEffect(() => {
     const unsub = socket.on('data-update', (data) => {
       if (!data?.values) return;
@@ -283,7 +317,6 @@ export default function Dashboard({ onNavigate }) {
     return unsub;
   }, [socket.on]);
 
-  // 连接状态变化：只在"已连接 -> 断开"时提示，避免启动时刷屏
   useEffect(() => {
     const unsub = socket.on('connection-status', (statuses) => {
       if (!Array.isArray(statuses)) return;
@@ -385,7 +418,11 @@ export default function Dashboard({ onNavigate }) {
   }, [activePlcCharts, activePlcVars, selectedVariables, timeWindow]);
 
   if (!config) {
-    return <div style={{ ...styles.emptyState, height: '100vh' }}>正在加载配置...</div>;
+    return (
+      <div style={{ ...styles.emptyState, height: '100vh', border: 'none' }}>
+        正在加载配置...
+      </div>
+    );
   }
 
   const activePlc = config.plcs?.find((p) => p.id === activePlcId);
@@ -393,30 +430,40 @@ export default function Dashboard({ onNavigate }) {
   const activeStatus = socket.connectionStatuses.find((s) => s.plcId === activePlcId);
   const isConnected = activeStatus?.connected || false;
   const isConnecting = connectingPlcs.has(activePlcId);
+  const statusLabel = !statusKnown ? '获取中' : isConnected ? '已连接' : isConnecting ? '连接中' : '未连接';
 
   return (
     <div style={styles.container}>
-      <div style={styles.topBar}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <div style={styles.topBarTitle}>PLCMonitor</div>
-          {config.plcs?.length > 0 && (
-            <select
-              style={styles.plcSelector}
-              value={activePlcId || ''}
-              onChange={(e) => handlePlcChange(e.target.value)}
-            >
-              {config.plcs.map((p) => (
-                <option key={p.id} value={p.id} style={{ color: '#333', background: '#fff' }}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
-          )}
+      <header style={header}>
+        <div style={styles.headerLeft}>
+          <div style={brand}>
+            <span style={brandMark}>PL</span>
+            PLCMonitor
+          </div>
+          <span style={styles.divider} />
+          <select
+            style={{ ...select, minWidth: '150px' }}
+            value={activePlcId || ''}
+            onChange={(e) => handlePlcChange(e.target.value)}
+            aria-label="选择 PLC"
+          >
+            {config.plcs?.map((p) => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </select>
         </div>
-        <div style={styles.topBarActions}>
-          <button style={styles.btn} onClick={() => onNavigate('config')}>配置</button>
+        <div style={styles.headerRight}>
+          <span style={styles.socketBadge}>
+            <span style={dot(
+              socket.connected === null
+                ? colors.warning
+                : socket.connected ? colors.success : colors.danger
+            )} />
+            {socket.connected === null ? '连接中' : socket.connected ? '服务在线' : '服务离线'}
+          </span>
+          <button style={button.ghost} onClick={() => onNavigate('config')}>配置</button>
         </div>
-      </div>
+      </header>
 
       <ConnectionStatus
         connectionStatuses={socket.connectionStatuses}
@@ -425,97 +472,95 @@ export default function Dashboard({ onNavigate }) {
       />
 
       <div style={styles.body}>
-        <div style={styles.sidebar}>
-          <div style={styles.sidebarToolbar}>
-            监视变量
-            {activePlc && (
-              <span style={{ fontSize: '11px', color: '#999', marginLeft: '8px' }}>- {activePlc.name}</span>
-            )}
+        <aside style={styles.sidebar}>
+          <div style={styles.sidebarHeader}>
+            <span>监视变量</span>
+            <span style={{ letterSpacing: 0, textTransform: 'none', fontWeight: 500 }}>
+              {activePlcVars.length}
+            </span>
           </div>
 
-          {activePlcId && (
-            <div style={styles.statusRow}>
-              <span style={{ fontSize: '12px', color: '#666' }}>
-                状态：
-                <span style={{ color: !statusKnown ? '#999' : isConnected ? '#4CAF50' : '#F44336', fontWeight: 600 }}>
-                  {!statusKnown ? '获取中...' : isConnected ? '已连接' : isConnecting ? '连接中...' : '未连接'}
-                </span>
-              </span>
-              {isConnected ? (
-                <button style={styles.disconnectBtn} onClick={() => handleDisconnect(activePlcId)}>断开</button>
-              ) : (
-                <button
-                  style={{ ...styles.connectBtn, background: isConnecting ? '#e8f5e9' : '#fff' }}
-                  onClick={() => handleConnect(activePlcId)}
-                  disabled={isConnecting}
-                >
-                  {isConnecting ? '连接中...' : '连接'}
-                </button>
-              )}
-            </div>
-          )}
-
-          {activePlcVars.map((v) => {
-            const data = bufferData.get(v.id);
-            const latest = data && data.length > 0 ? data[data.length - 1] : null;
-            return (
-              <div
-                key={v.id}
-                style={{
-                  ...styles.treeItem,
-                  ...(selectedVariables.has(v.id) ? styles.treeItemSelected : {}),
-                }}
-                onClick={() => toggleVariable(v.id)}
-              >
-                <input
-                  type="checkbox"
-                  style={styles.checkbox}
-                  checked={selectedVariables.has(v.id)}
-                  onChange={() => toggleVariable(v.id)}
-                  onClick={(e) => e.stopPropagation()}
-                />
-                <span>{v.name}</span>
-                <span style={{ marginLeft: 'auto', color: '#666', fontSize: '12px' }}>
-                  {formatValue(latest?.value)}
+          {activePlc && (
+            <div style={styles.plcCard}>
+              <div style={styles.plcCardTop}>
+                <span style={styles.plcName}>{activePlc.name}</span>
+                <span style={{ ...styles.statusText, color: isConnected ? colors.success : colors.textMuted }}>
+                  <span style={dot(isConnected ? colors.success : colors.textMuted)} />
+                  {statusLabel}
                 </span>
               </div>
-            );
-          })}
-
-          {activePlcId && activePlcVars.length === 0 && (
-            <div style={{ padding: '16px', color: '#999', fontSize: '13px', textAlign: 'center' }}>
-              该 PLC 暂无变量
+              <div style={styles.plcCardBottom}>
+                <span style={styles.plcAddress}>{activePlc.ip}</span>
+                {isConnected ? (
+                  <button
+                    style={{ ...button.subtle, color: colors.danger, padding: '0 4px' }}
+                    onClick={() => handleDisconnect(activePlcId)}
+                  >
+                    断开
+                  </button>
+                ) : (
+                  <button
+                    style={{ ...button.subtle, color: colors.accent, padding: '0 4px' }}
+                    onClick={() => handleConnect(activePlcId)}
+                    disabled={isConnecting}
+                  >
+                    {isConnecting ? '连接中...' : '连接'}
+                  </button>
+                )}
+              </div>
             </div>
           )}
-          {!activePlcId && (
-            <div style={{ padding: '16px', color: '#999', fontSize: '13px', textAlign: 'center' }}>
-              请先在配置页面添加 PLC
-            </div>
-          )}
-        </div>
 
-        <div style={styles.contentArea}>
-          <div style={styles.chartToolbar}>
-            {TIME_WINDOWS.map((tw) => (
-              <button
-                key={tw.value}
-                style={{ ...styles.timeBtn, ...(timeWindow === tw.value ? styles.timeBtnActive : {}) }}
-                onClick={() => setTimeWindow(tw.value)}
-              >
-                {tw.label}
-              </button>
-            ))}
+          <div style={styles.variableList}>
+            {activePlcVars.map((v) => {
+              const data = bufferData.get(v.id);
+              const latest = data && data.length > 0 ? data[data.length - 1] : null;
+              const active = selectedVariables.has(v.id);
+              return (
+                <div
+                  key={v.id}
+                  style={{ ...styles.variableRow, ...(active ? styles.variableRowActive : {}) }}
+                  onClick={() => toggleVariable(v.id)}
+                >
+                  <input
+                    type="checkbox"
+                    style={styles.checkbox}
+                    checked={active}
+                    onChange={() => toggleVariable(v.id)}
+                    onClick={(e) => e.stopPropagation()}
+                    aria-label={`监视 ${v.name}`}
+                  />
+                  <span>{v.name}</span>
+                  <span style={styles.variableValue}>{formatValue(latest?.value)}</span>
+                </div>
+              );
+            })}
+
+            {activePlcId && activePlcVars.length === 0 && (
+              <div style={styles.sidebarEmpty}>该 PLC 暂无变量，请先在配置中添加</div>
+            )}
+            {!activePlcId && (
+              <div style={styles.sidebarEmpty}>请先在配置页面添加 PLC</div>
+            )}
+          </div>
+        </aside>
+
+        <main style={styles.content}>
+          <div style={styles.toolbar}>
+            <div style={styles.segmented}>
+              {TIME_WINDOWS.map((tw) => (
+                <button
+                  key={tw.value}
+                  style={{ ...styles.segBtn, ...(timeWindow === tw.value ? styles.segBtnActive : {}) }}
+                  onClick={() => setTimeWindow(tw.value)}
+                >
+                  {tw.label}
+                </button>
+              ))}
+            </div>
             <div style={{ flex: 1 }} />
-            <button
-              style={{
-                ...styles.timeBtn,
-                backgroundColor: paused ? '#ff9800' : '#fff',
-                color: paused ? '#fff' : '#333',
-                borderColor: paused ? '#ff9800' : '#ddd',
-              }}
-              onClick={togglePause}
-            >
-              {paused ? '继续' : '暂停'}
+            <button style={button.ghost} onClick={togglePause}>
+              {paused ? '继续采集' : '暂停'}
             </button>
           </div>
 
@@ -533,7 +578,7 @@ export default function Dashboard({ onNavigate }) {
               />
             ))
           )}
-        </div>
+        </main>
       </div>
 
       <NotificationToast toasts={toasts} removeToast={removeToast} />

@@ -1,7 +1,8 @@
+import { colors, font } from '../styles/theme';
+
 export const COMMON_COLORS = [
-  '#2196F3', '#F44336', '#4CAF50', '#FF9800',
-  '#9C27B0', '#00BCD4', '#FF5722', '#607D8B',
-  '#E91E63', '#3F51B5', '#009688', '#FFC107',
+  '#2563eb', '#12b76a', '#f79009', '#7a5af8',
+  '#0ea5e9', '#e11d48', '#14b8a6', '#f97316',
 ];
 
 export function getCurveColor(chartDef, variableId, index) {
@@ -29,12 +30,13 @@ export function createChartOptions(chartDef, variables, timeWindow = 30) {
 
   variableIds.forEach((vid, idx) => {
     const v = varMap.get(vid);
+    const color = getCurveColor(chartDef, vid, idx);
     series.push({
       label: v ? `${v.name}${v.unit ? ` (${v.unit})` : ''}` : vid,
       scale: 'y',
-      stroke: getCurveColor(chartDef, vid, idx),
-      width: 2,
-      fill: `${getCurveColor(chartDef, vid, idx)}20`,
+      stroke: color,
+      width: 1.6,
+      fill: variableIds.length === 1 ? `${color}1a` : null,
       points: { show: false },
       spanGaps: true,
     });
@@ -59,6 +61,7 @@ export function createChartOptions(chartDef, variables, timeWindow = 30) {
     width: 800,
     height: 300,
     series,
+    legend: { show: false },
     cursor: {
       show: true,
       drag: { x: true, y: false },
@@ -71,22 +74,22 @@ export function createChartOptions(chartDef, variables, timeWindow = 30) {
     axes: [
       {
         scale: 'x',
-        label: '时间',
-        stroke: '#999',
+        stroke: colors.textMuted,
+        font: `11px ${font.family}`,
         values: (u, splits) => splits.map((v) =>
           new Date(v * 1000).toLocaleTimeString('zh-CN', { hour12: false })
         ),
-        grid: { stroke: 'rgba(0,0,0,0.08)', width: 1 },
-        ticks: { stroke: 'rgba(0,0,0,0.1)', width: 1 },
-        size: 60,
+        grid: { stroke: '#f2f4f7', width: 1 },
+        ticks: { stroke: '#e4e7ec', width: 1, size: 4 },
+        size: 34,
       },
       {
         scale: 'y',
-        label: '数值',
-        stroke: '#999',
-        grid: { stroke: 'rgba(0,0,0,0.08)', width: 1 },
-        ticks: { stroke: 'rgba(0,0,0,0.1)', width: 1 },
-        size: 60,
+        stroke: colors.textMuted,
+        font: `11px ${font.family}`,
+        grid: { stroke: '#f2f4f7', width: 1 },
+        ticks: { stroke: '#e4e7ec', width: 1, size: 4 },
+        size: 48,
       },
     ],
   };

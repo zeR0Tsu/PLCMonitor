@@ -2,51 +2,74 @@ import React, { useEffect, useRef, useMemo } from 'react';
 import uPlot from 'uplot';
 import 'uplot/dist/uPlot.min.css';
 import { createChartOptions, prepareChartData, getCurveColor, formatValue } from '../utils/chartOptions';
+import { colors, radius, panel } from '../styles/theme';
 
 const CHART_HEIGHT = 300;
 
 const styles = {
   container: {
-    background: '#fff',
-    borderRadius: '8px',
-    padding: '16px',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-    marginBottom: '16px',
+    ...panel,
+    padding: '16px 18px 14px',
+    marginBottom: '14px',
+  },
+  header: {
+    display: 'flex',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    marginBottom: '6px',
   },
   title: {
-    fontSize: '16px',
+    fontSize: '13px',
     fontWeight: 600,
-    marginBottom: '12px',
-    color: '#333',
+    color: colors.text,
+    letterSpacing: '-0.01em',
+  },
+  meta: {
+    fontSize: '11px',
+    color: colors.textMuted,
+  },
+  chartWrap: {
+    position: 'relative',
   },
   legend: {
     display: 'flex',
     flexWrap: 'wrap',
-    gap: '16px',
-    marginTop: '8px',
-    padding: '8px 0',
+    gap: '18px',
+    marginTop: '10px',
+    paddingTop: '10px',
+    borderTop: `1px solid ${colors.border}`,
   },
   legendItem: {
     display: 'flex',
     alignItems: 'center',
-    gap: '6px',
-    fontSize: '13px',
-    cursor: 'pointer',
+    gap: '7px',
+    fontSize: '12px',
+    color: colors.textSecondary,
   },
-  legendColor: {
-    width: '12px',
-    height: '12px',
-    borderRadius: '2px',
+  legendDot: {
+    width: '7px',
+    height: '7px',
+    borderRadius: '50%',
     flexShrink: 0,
+  },
+  legendValue: {
+    fontWeight: 600,
+    color: colors.text,
+    fontVariantNumeric: 'tabular-nums',
+  },
+  legendUnit: {
+    color: colors.textMuted,
   },
   overlay: {
     position: 'absolute',
-    top: '50%',
-    left: '50%',
-    transform: 'translate(-50%, -50%)',
-    color: '#999',
-    fontSize: '14px',
-    textAlign: 'center',
+    top: '8px',
+    right: '8px',
+    padding: '3px 8px',
+    backgroundColor: colors.surface,
+    border: `1px solid ${colors.border}`,
+    borderRadius: radius.sm,
+    color: colors.textMuted,
+    fontSize: '11px',
     pointerEvents: 'none',
   },
 };
@@ -67,7 +90,6 @@ export default function RealtimeChart({ chartDef, variables, bufferData, timeWin
     [chartDef, variables, timeWindow]
   );
 
-  // 选项或曲线变化时重建图表，避免 uPlot 保留旧的 series 定义
   useEffect(() => {
     const element = chartRef.current;
     if (!element) return undefined;
@@ -79,7 +101,7 @@ export default function RealtimeChart({ chartDef, variables, bufferData, timeWin
     const resize = () => {
       const container = containerRef.current;
       if (!container || !uplotRef.current) return;
-      const width = Math.max(container.clientWidth - 32, 240);
+      const width = Math.max(container.clientWidth - 36, 240);
       uplotRef.current.setSize({ width, height: CHART_HEIGHT });
     };
 
@@ -94,25 +116,40 @@ export default function RealtimeChart({ chartDef, variables, bufferData, timeWin
       uplot.destroy();
       uplotRef.current = null;
     };
-    // bufferData 只在初始化时使用，后续由下面的数据 effect 更新
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [options, variableIds, timeWindow]);
 
   useEffect(() => {
     if (!uplotRef.current) return;
     const data = prepareChartData(bufferData, variableIds, timeWindow);
-    const width = Math.max((containerRef.current?.clientWidth || 832) - 32, 240);
-    uplotRef.current.setSize({ width, height: CHART_HEIGHT });
     uplotRef.current.setData(data);
   }, [bufferData, variableIds, timeWindow]);
 
+  const lastTimestamp = useMemo(() => {
+    let latest = 0;
+    for (const vid of variableIds) {
+      const rows = bufferData.get(vid);
+      if (rows?.length) latest = Math.max(latest, rows[rows.length - 1].timestamp);
+    }
+    return latest;
+  }, [bufferData, variableIds]);
+
   return (
-    <div style={styles.container} ref={containerRef}>
-      <div style={styles.title}>{chartDef.title || '图表'}</div>
-      <div style={{ position: 'relative' }}>
-        <div ref={chartRef} />
-        {!connected && <div style={styles.overlay}>数据连接已断开</div>}
+    <section style={styles.container} ref={containerRef}>
+      <div style={styles.header}>
+        <div style={styles.title}>{chartDef.title || '图表'}</div>
+        {lastTimestamp > 0 && (
+          <div style={styles.meta}>
+            更新于 {new Date(lastTimestamp).toLocaleTimeString('zh-CN', { hour12: false })}
+          </div>
+        )}
       </div>
+
+      <div style={styles.chartWrap}>
+        <div ref={chartRef} />
+        {!connected && <div style={styles.overlay}>未连接</div>}
+      </div>
+
       <div style={styles.legend}>
         {variableIds.map((vid, idx) => {
           const variable = varMap.get(vid);
@@ -121,16 +158,14 @@ export default function RealtimeChart({ chartDef, variables, bufferData, timeWin
           const latest = series && series.length > 0 ? series[series.length - 1] : null;
           return (
             <div key={vid} style={styles.legendItem}>
-              <div style={{ ...styles.legendColor, backgroundColor: color }} />
+              <span style={{ ...styles.legendDot, backgroundColor: color }} />
               <span>{variable ? variable.name : vid}</span>
-              <span style={{ fontWeight: 600, color }}>
-                {formatValue(latest?.value)}
-              </span>
-              {variable?.unit && <span style={{ color: '#999' }}>{variable.unit}</span>}
+              <span style={styles.legendValue}>{formatValue(latest?.value)}</span>
+              {variable?.unit && <span style={styles.legendUnit}>{variable.unit}</span>}
             </div>
           );
         })}
       </div>
-    </div>
+    </section>
   );
 }

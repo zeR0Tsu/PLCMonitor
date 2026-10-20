@@ -1,5 +1,7 @@
 # PLCMonitor - UI Design Specification
 
+> 2026-10-20 实现说明：前端已改为中性色 + 深色强调的简洁视觉体系，实际取色与组件样式以 `frontend/src/styles/theme.js` 为准。本文件保留早期的信息架构与交互设计。
+
 ---
 
 ## Phase 1: Understand

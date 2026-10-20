@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import Dashboard from './pages/Dashboard';
 import ConfigPage from './pages/ConfigPage';
+import { colors } from './styles/theme';
 
 const styles = {
   app: {
@@ -8,10 +9,9 @@ const styles = {
     height: '100vh',
     display: 'flex',
     flexDirection: 'column',
-    fontFamily: '"Microsoft YaHei", "PingFang SC", sans-serif',
     fontSize: '14px',
-    color: '#333',
-    backgroundColor: '#f5f5f5',
+    color: colors.text,
+    backgroundColor: colors.bg,
     overflow: 'hidden',
   },
 };

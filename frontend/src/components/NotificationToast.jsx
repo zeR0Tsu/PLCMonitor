@@ -1,45 +1,58 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { colors, radius } from '../styles/theme';
 
 const styles = {
   container: {
     position: 'fixed',
-    top: '16px',
-    right: '16px',
+    top: '68px',
+    right: '20px',
     zIndex: 9999,
     display: 'flex',
     flexDirection: 'column',
     gap: '8px',
-    maxWidth: '360px',
+    maxWidth: '380px',
   },
   toast: {
     display: 'flex',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: '10px',
-    padding: '12px 16px',
-    borderRadius: '8px',
-    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-    fontSize: '13px',
-    animation: 'slideIn 0.3s ease',
-    color: '#fff',
+    padding: '10px 12px 10px 14px',
+    borderRadius: radius.md,
+    backgroundColor: colors.surface,
+    border: `1px solid ${colors.border}`,
+    boxShadow: '0 4px 16px rgba(16, 24, 40, 0.08)',
+    fontSize: '12px',
+    lineHeight: 1.5,
+    color: colors.text,
+    animation: 'toast-in 0.18s ease',
   },
-  error: {
-    backgroundColor: '#F44336',
+  accent: {
+    width: '3px',
+    alignSelf: 'stretch',
+    borderRadius: '2px',
+    flexShrink: 0,
   },
-  success: {
-    backgroundColor: '#4CAF50',
-  },
-  info: {
-    backgroundColor: '#2196F3',
+  message: {
+    flex: 1,
+    paddingTop: '1px',
+    wordBreak: 'break-word',
   },
   close: {
-    marginLeft: 'auto',
-    cursor: 'pointer',
-    opacity: 0.8,
-    background: 'none',
     border: 'none',
-    color: '#fff',
-    fontSize: '16px',
+    background: 'transparent',
+    color: colors.textMuted,
+    cursor: 'pointer',
+    fontSize: '14px',
+    lineHeight: 1,
+    padding: '2px 4px',
+    flexShrink: 0,
   },
+};
+
+const typeColor = {
+  error: colors.danger,
+  success: colors.success,
+  info: colors.accent,
 };
 
 let toastId = 0;
@@ -81,16 +94,11 @@ export default function NotificationToast({ toasts, removeToast }) {
   return (
     <div style={styles.container}>
       {toasts.map((toast) => (
-        <div
-          key={toast.id}
-          style={{
-            ...styles.toast,
-            ...styles[toast.type] || styles.info,
-          }}
-        >
-          <span>{toast.message}</span>
-          <button style={styles.close} onClick={() => removeToast(toast.id)}>
-            x
+        <div key={toast.id} style={styles.toast} role="status">
+          <span style={{ ...styles.accent, backgroundColor: typeColor[toast.type] || colors.accent }} />
+          <span style={styles.message}>{toast.message}</span>
+          <button style={styles.close} onClick={() => removeToast(toast.id)} aria-label="关闭">
+            ×
           </button>
         </div>
       ))}
