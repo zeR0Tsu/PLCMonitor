@@ -139,5 +139,7 @@ Socket.IO：
 - 不支持写入 PLC、数值告警、数据导出
 - 历史数据仅保留 30 分钟，超出后自动删除
 - 无身份验证，仅适用于可信局域网
+- 采集周期为「目标值」：实际频率受 PLC 响应时间限制（实测 4 个 Real 一次读取约 160ms，100ms 配置下实际约 6Hz）
+- 单台 PLC 通常只允许 1 个 S7 连接：TIA Portal、其他上位机占用时会连接失败，断开后需等待数秒再重连
 - `node-snap7` 为原生模块：Electron 打包前需针对 Electron ABI 重建（`electron-rebuild`），否则真实 PLC 连接不可用；未安装时只能使用显式模拟模式
 - 本地未安装 `better-sqlite3` 时自动回退到 Node 内置 `node:sqlite` 或 `sql.js`

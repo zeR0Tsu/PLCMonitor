@@ -149,11 +149,12 @@ class Poller {
 
     const tick = async () => {
       this._timers.delete(plcId);
+      const startedAt = Date.now();
       await this._pollOnce(plcId);
-      // 轮询结束再排下一次，保证请求不会重叠堆积
-      if (this._plcClients.get(plcId)?.connected) {
-        this._timers.set(plcId, setTimeout(tick, this._intervalMs));
-      }
+      if (!this._plcClients.get(plcId)?.connected) return;
+      // 保持目标采集周期：扣除本次读取耗时，且不重叠请求
+      const delay = Math.max(0, this._intervalMs - (Date.now() - startedAt));
+      this._timers.set(plcId, setTimeout(tick, delay));
     };
 
     this._timers.set(plcId, setTimeout(tick, 0));

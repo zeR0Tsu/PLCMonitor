@@ -9,8 +9,8 @@ const MAX_READ_SPAN = 180;
 
 const ERROR_HINTS = {
   10060: '连接超时，请检查 PLC 是否通电、IP 是否正确、防火墙是否放行 TCP 102 端口',
-  10061: '连接被拒绝，PLC 可能未开放 S7 连接资源（最多 3-4 个并发连接）',
-  10065: '主机不可达，请检查 IP 地址、网段和网线连接',
+  10061: '连接被拒绝，PLC 可能未开放 S7 连接资源',
+  10065: 'PLC 拒绝连接：常见原因是连接资源已被占用（TIA Portal、其他上位机或上一次连接尚未释放）。请关闭其他客户端，或等待 5-10 秒后重试；若持续失败请核对 IP、机架和槽号',
   10051: '网络不可达，请检查网络连接和路由设置',
   10049: '本地地址不可用',
 };
@@ -133,6 +133,7 @@ class PlcClient {
 
     this.connecting = true;
     this._lastError = null;
+    console.log(`[PLC ${this.name}] 正在连接 ${this.ip} rack=${this.rack} slot=${this.slot}${this.simulation ? ' (simulate)' : ''}`);
 
     return new Promise((resolve) => {
       try {
@@ -140,6 +141,8 @@ class PlcClient {
           this.connecting = false;
           if (err) {
             this.connected = false;
+            // 失败后释放本地半开连接，避免下次重试继续报错
+            try { this._s7client.Disconnect(); } catch (_) { /* ignore */ }
             const errText = this._s7client.ErrorText(err);
             const hint = errHint(err);
             this._lastError = `连接失败 (${err}) ${errText}${hint ? '\n' + hint : ''}`;

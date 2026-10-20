@@ -335,6 +335,8 @@ DELETE /api/charts/:id  - 删除图表
 - 存储层按 better-sqlite3 → node:sqlite → sql.js 顺序降级；sql.js 只在有变更时每 5 秒落盘
 - 模拟 PLC 仅通过 `PLC_SIMULATE=1` 或 `plc.simulate = true` 启用，正常环境不可开启
 - 自动化验证：`npm run smoke`（使用临时数据库，不影响 `data/plc_data.db`）
+- 实测（192.168.0.120 / DB6 / 4 个 Real）：单次 S7 读取往返约 160ms，因此 100ms 周期下实际采集约 6Hz；如设备响应更慢会自动降速，不会堆积请求
+- 该 PLC 同时只接受一个 S7 客户端连接：TIA Portal 或其他上位机占用时会返回 10065，断开后重新连接需等待约 5-10 秒让 PLC 释放资源
 
 ## Recommended Next Steps
 
