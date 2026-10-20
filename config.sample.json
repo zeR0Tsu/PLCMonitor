@@ -1,7 +1,9 @@
 {
   "server": {
     "port": 3000,
-    "lanBind": "0.0.0.0"
+    "lanBind": "0.0.0.0",
+    "pollIntervalMs": 100,
+    "simulation": false
   },
   "plcs": [],
   "variables": [],

@@ -233,25 +233,26 @@ export default function ConfigPage({ onNavigate }) {
   const [editingItem, setEditingItem] = useState(null);
   const [form, setForm] = useState({});
 
-  useEffect(() => {
-    fetch('/api/config')
-      .then((r) => r.json())
-      .then(setConfig)
-      .catch(console.error);
-  }, []);
-
-  const saveConfig = useCallback(async (newConfig) => {
+  const refreshConfig = useCallback(async () => {
     try {
-      await fetch('/api/config', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newConfig),
+      const resp = await fetch('/api/config');
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const cfg = await resp.json();
+      setConfig(cfg);
+      setSelectedPlcId((prev) => {
+        if (prev && cfg.plcs?.some((p) => p.id === prev)) return prev;
+        return cfg.plcs?.[0]?.id || null;
       });
-      setConfig(newConfig);
+      return cfg;
     } catch (err) {
-      console.error('保存配置失败:', err);
+      console.error('加载配置失败:', err);
+      return null;
     }
   }, []);
+
+  useEffect(() => {
+    refreshConfig();
+  }, [refreshConfig]);
 
   // ============ PLC CRUD ============
   const openPlcForm = (plc = null) => {
@@ -261,38 +262,26 @@ export default function ConfigPage({ onNavigate }) {
   };
 
   const savePlc = async () => {
-    const updated = { ...config };
-    if (editingItem) {
-      const resp = await fetch(`/api/plcs/${editingItem.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
-      });
-      const result = await resp.json();
-      updated.plcs = config.plcs.map((p) => p.id === result.id ? result : p);
-    } else {
-      const resp = await fetch('/api/plcs', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
-      });
-      const result = await resp.json();
-      updated.plcs = [...config.plcs, result];
+    const isEdit = Boolean(editingItem);
+    const resp = await fetch(isEdit ? `/api/plcs/${editingItem.id}` : '/api/plcs', {
+      method: isEdit ? 'PUT' : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(form),
+    });
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      window.alert(`保存 PLC 失败：${err.error || resp.status}`);
+      return;
     }
-    setConfig(updated);
     setShowModal(null);
     setEditingItem(null);
+    await refreshConfig();
   };
 
   const deletePlc = async (id) => {
+    if (!window.confirm('删除 PLC 会同时删除其变量和图表，确定继续？')) return;
     await fetch(`/api/plcs/${id}`, { method: 'DELETE' });
-    const updated = { ...config };
-    updated.plcs = config.plcs.filter((p) => p.id !== id);
-    updated.variables = config.variables.filter((v) => v.plcId !== id);
-    updated.charts = config.charts.filter((c) =>
-      c.variableIds.some((vid) => updated.variables.some((v) => v.id === vid))
-    );
-    setConfig(updated);
+    await refreshConfig();
   };
 
   // ============ Variable CRUD ============
@@ -313,38 +302,33 @@ export default function ConfigPage({ onNavigate }) {
   };
 
   const saveVariable = async () => {
-    const updated = { ...config };
-    if (editingItem) {
-      const resp = await fetch(`/api/variables/${editingItem.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
-      });
-      const result = await resp.json();
-      updated.variables = config.variables.map((v) => v.id === result.id ? result : v);
-    } else {
-      const resp = await fetch('/api/variables', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, plcId: selectedPlcId }),
-      });
-      const result = await resp.json();
-      updated.variables = [...config.variables, result];
+    const isEdit = Boolean(editingItem);
+    const payload = {
+      ...form,
+      plcId: form.plcId || selectedPlcId,
+      dbNumber: Number(form.dbNumber ?? 1),
+      offset: Number(form.offset ?? 0),
+      bitIndex: form.bitIndex === '' || form.bitIndex == null ? null : Number(form.bitIndex),
+    };
+    const resp = await fetch(isEdit ? `/api/variables/${editingItem.id}` : '/api/variables', {
+      method: isEdit ? 'PUT' : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      window.alert(`保存变量失败：${err.error || resp.status}`);
+      return;
     }
-    setConfig(updated);
     setShowModal(null);
     setEditingItem(null);
+    await refreshConfig();
   };
 
   const deleteVariable = async (id) => {
+    if (!window.confirm('确定删除该变量？图表中的引用也会一并移除。')) return;
     await fetch(`/api/variables/${id}`, { method: 'DELETE' });
-    const updated = { ...config };
-    updated.variables = config.variables.filter((v) => v.id !== id);
-    updated.charts = updated.charts.map((c) => ({
-      ...c,
-      variableIds: c.variableIds.filter((vid) => vid !== id),
-    }));
-    setConfig(updated);
+    await refreshConfig();
   };
 
   // ============ Chart CRUD ============
@@ -356,40 +340,40 @@ export default function ConfigPage({ onNavigate }) {
       variableIds: [],
       curveColors: {},
       timeWindow: 30,
+      yAxisMin: '',
+      yAxisMax: '',
     });
     setShowModal('chart');
   };
 
   const saveChart = async () => {
-    const updated = { ...config };
-    const chartData = { ...form, plcId: selectedPlcId };
-    if (editingItem) {
-      const resp = await fetch(`/api/charts/${editingItem.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(chartData),
-      });
-      const result = await resp.json();
-      updated.charts = config.charts.map((c) => c.id === result.id ? result : c);
-    } else {
-      const resp = await fetch('/api/charts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(chartData),
-      });
-      const result = await resp.json();
-      updated.charts = [...config.charts, result];
+    const isEdit = Boolean(editingItem);
+    const chartData = {
+      ...form,
+      plcId: form.plcId || selectedPlcId,
+      timeWindow: Number(form.timeWindow ?? 30),
+      yAxisMin: form.yAxisMin === '' || form.yAxisMin == null ? '' : Number(form.yAxisMin),
+      yAxisMax: form.yAxisMax === '' || form.yAxisMax == null ? '' : Number(form.yAxisMax),
+    };
+    const resp = await fetch(isEdit ? `/api/charts/${editingItem.id}` : '/api/charts', {
+      method: isEdit ? 'PUT' : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(chartData),
+    });
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      window.alert(`保存图表失败：${err.error || resp.status}`);
+      return;
     }
-    setConfig(updated);
     setShowModal(null);
     setEditingItem(null);
+    await refreshConfig();
   };
 
   const deleteChart = async (id) => {
+    if (!window.confirm('确定删除该图表布局？')) return;
     await fetch(`/api/charts/${id}`, { method: 'DELETE' });
-    const updated = { ...config };
-    updated.charts = config.charts.filter((c) => c.id !== id);
-    setConfig(updated);
+    await refreshConfig();
   };
 
   const toggleChartVariable = (vid) => {
@@ -717,6 +701,27 @@ export default function ConfigPage({ onNavigate }) {
                     <option value={300}>5 分钟</option>
                     <option value={1800}>30 分钟</option>
                   </select>
+                </div>
+                <div style={styles.formGroup}>
+                  <label style={styles.formLabel}>纵坐标范围</label>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <input
+                      style={styles.formInput}
+                      placeholder="最小值（留空自动）"
+                      value={form.yAxisMin ?? ''}
+                      onChange={(e) => setForm({ ...form, yAxisMin: e.target.value })}
+                    />
+                    <span style={{ color: '#999' }}>~</span>
+                    <input
+                      style={styles.formInput}
+                      placeholder="最大值（留空自动）"
+                      value={form.yAxisMax ?? ''}
+                      onChange={(e) => setForm({ ...form, yAxisMax: e.target.value })}
+                    />
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#999', marginTop: '4px' }}>
+                    两个都填则固定范围；留空则自动适应数据
+                  </div>
                 </div>
                 <div style={styles.formGroup}>
                   <label style={styles.formLabel}>包含的变量</label>

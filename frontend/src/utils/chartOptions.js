@@ -1,115 +1,130 @@
-/**
- * uPlot 图表选项生成工具
- */
-
-const COMMON_COLORS = [
+export const COMMON_COLORS = [
   '#2196F3', '#F44336', '#4CAF50', '#FF9800',
   '#9C27B0', '#00BCD4', '#FF5722', '#607D8B',
   '#E91E63', '#3F51B5', '#009688', '#FFC107',
 ];
 
-/**
- * 生成 uPlot 图表选项
- * @param {object} chartDef - 图表定义
- * @param {Array} variables - 变量定义列表
- * @param {number} timeWindow - 时间窗口（秒）
- * @returns {object} uPlot options
- */
+export function getCurveColor(chartDef, variableId, index) {
+  return chartDef?.curveColors?.[variableId] || COMMON_COLORS[index % COMMON_COLORS.length];
+}
+
+export function formatValue(value) {
+  if (value === null || value === undefined || Number.isNaN(value)) return '--';
+  if (typeof value === 'number') {
+    return Number.isInteger(value) ? String(value) : value.toFixed(2);
+  }
+  return String(value);
+}
+
 export function createChartOptions(chartDef, variables, timeWindow = 30) {
-  const varMap = {};
-  variables.forEach((v) => { varMap[v.id] = v; });
+  const varMap = new Map(variables.map((v) => [v.id, v]));
+  const variableIds = chartDef.variableIds || [];
 
   const series = [
-    // X 轴：时间
     {
       label: '时间',
-      value: (u, v) => {
-        const d = new Date(v * 1000);
-        return d.toLocaleTimeString('zh-CN', { hour12: false });
-      },
+      value: (u, v) => (v == null ? '--' : new Date(v * 1000).toLocaleTimeString('zh-CN', { hour12: false })),
     },
   ];
 
-  // 数据系列
-  (chartDef.variableIds || []).forEach((vid, idx) => {
-    const v = varMap[vid];
-    const color = (chartDef.curveColors && chartDef.curveColors[vid]) || COMMON_COLORS[idx % COMMON_COLORS.length];
+  variableIds.forEach((vid, idx) => {
+    const v = varMap.get(vid);
     series.push({
       label: v ? `${v.name}${v.unit ? ` (${v.unit})` : ''}` : vid,
-      stroke: color,
+      scale: 'y',
+      stroke: getCurveColor(chartDef, vid, idx),
       width: 2,
+      fill: `${getCurveColor(chartDef, vid, idx)}20`,
       points: { show: false },
       spanGaps: true,
     });
   });
 
-  const msWindow = timeWindow * 1000;
+  const yScale = {};
+  const min = chartDef.yAxisMin;
+  const max = chartDef.yAxisMax;
+  const hasMin = min !== undefined && min !== null && min !== '';
+  const hasMax = max !== undefined && max !== null && max !== '';
+  if (hasMin || hasMax) {
+    yScale.range = [
+      hasMin ? Number(min) : null,
+      hasMax ? Number(max) : null,
+    ];
+    yScale.auto = !(hasMin && hasMax);
+  } else {
+    yScale.auto = true;
+  }
 
   return {
     width: 800,
     height: 300,
+    series,
     cursor: {
       show: true,
-      drag: { x: true, y: true },
+      drag: { x: true, y: false },
     },
-    select: {
-      show: true,
-      left: 0,
-      top: 0,
-      width: 0,
-      height: 0,
+    select: { show: false },
+    scales: {
+      x: { time: true },
+      y: yScale,
     },
     axes: [
       {
+        scale: 'x',
         label: '时间',
         stroke: '#999',
+        values: (u, splits) => splits.map((v) =>
+          new Date(v * 1000).toLocaleTimeString('zh-CN', { hour12: false })
+        ),
         grid: { stroke: 'rgba(0,0,0,0.08)', width: 1 },
         ticks: { stroke: 'rgba(0,0,0,0.1)', width: 1 },
+        size: 60,
       },
       {
+        scale: 'y',
         label: '数值',
         stroke: '#999',
         grid: { stroke: 'rgba(0,0,0,0.08)', width: 1 },
         ticks: { stroke: 'rgba(0,0,0,0.1)', width: 1 },
+        size: 60,
       },
     ],
   };
 }
 
 /**
- * 准备图表数据格式
- * @param {Map<string, Array>} bufferData - variableId -> [{ timestamp, value }]
- * @param {Array} variableIds - 有序的变量 ID 列表
- * @param {number} timeWindow - 时间窗口（秒）
- * @returns {[Array, Array[]]} [timestamps, values[]]
+ * 将各变量缓冲数据转换为 uPlot 列数据（x 为秒）
  */
 export function prepareChartData(bufferData, variableIds, timeWindow = 30) {
-  const now = Date.now() / 1000;
-  const since = now - timeWindow;
+  const since = Date.now() - timeWindow * 1000;
 
-  // 收集所有时间点
   const timeSet = new Set();
-  const varData = new Map();
+  const byVariable = new Map();
 
-  variableIds.forEach((vid) => {
-    const data = bufferData.get(vid) || [];
-    const filtered = data.filter((d) => (d.timestamp / 1000) >= since);
-    varData.set(vid, filtered);
-    filtered.forEach((d) => timeSet.add(Math.floor(d.timestamp / 1000))); // 按秒对齐
-  });
+  for (const vid of variableIds) {
+    const rows = (bufferData.get(vid) || []).filter(
+      (d) => d.timestamp >= since && d.value !== null && d.value !== undefined
+    );
+    const map = new Map();
+    for (const row of rows) {
+      const ms = row.timestamp;
+      map.set(ms, row.value);
+      timeSet.add(ms);
+    }
+    byVariable.set(vid, map);
+  }
 
   const timestamps = Array.from(timeSet).sort((a, b) => a - b);
+  const x = timestamps.map((t) => t / 1000);
+  const columns = [x];
 
-  // 构建每列的数值数组
-  const columns = [timestamps];
-  variableIds.forEach((vid) => {
-    const data = varData.get(vid) || [];
-    const dataMap = new Map();
-    data.forEach((d) => dataMap.set(Math.floor(d.timestamp / 1000), d.value));
-
-    const col = timestamps.map((t) => dataMap.has(t) ? dataMap.get(t) : null);
-    columns.push(col);
-  });
+  for (const vid of variableIds) {
+    const map = byVariable.get(vid);
+    columns.push(timestamps.map((t) => {
+      const value = map.get(t);
+      return typeof value === 'number' && Number.isFinite(value) ? value : null;
+    }));
+  }
 
   return columns;
 }

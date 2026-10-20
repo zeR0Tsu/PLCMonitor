@@ -36,6 +36,25 @@ class Notifier {
   }
 
   /**
+   * 注册一个 PLC 的初始状态（不触发事件，避免把"未连接"当成断连通知）
+   */
+  ensureStatus(plcId) {
+    if (this._plcStatuses.has(plcId)) return;
+    this._plcStatuses.set(plcId, {
+      connected: false,
+      lastUpdate: Date.now(),
+      error: null,
+    });
+  }
+
+  /**
+   * 移除 PLC 的状态记录（删除 PLC 时调用）
+   */
+  removeStatus(plcId) {
+    this._plcStatuses.delete(plcId);
+  }
+
+  /**
    * 获取所有 PLC 的连接状态
    * @returns {Array<{ plcId, connected, lastUpdate, error }>}
    */

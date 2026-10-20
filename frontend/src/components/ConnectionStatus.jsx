@@ -47,8 +47,11 @@ const styles = {
   },
 };
 
-export default function ConnectionStatus({ connectionStatuses, socketConnected }) {
-  const disconnected = connectionStatuses.filter((s) => !s.connected);
+export default function ConnectionStatus({ connectionStatuses, socketConnected, plcs = [] }) {
+  const plcName = (id) => plcs.find((p) => p.id === id)?.name || id;
+  const disconnected = connectionStatuses.filter(
+    (s) => !s.connected && s.error && s.error !== '已手动断开'
+  );
 
   return (
     <>
@@ -66,7 +69,7 @@ export default function ConnectionStatus({ connectionStatuses, socketConnected }
               ...styles.dot,
               backgroundColor: status.connected ? '#4CAF50' : '#F44336',
             }} />
-            <span>{status.plcId}</span>
+            <span>{plcName(status.plcId)}</span>
           </div>
         ))}
       </div>
@@ -75,11 +78,9 @@ export default function ConnectionStatus({ connectionStatuses, socketConnected }
         <div style={styles.alertBar}>
           <span style={styles.alertIcon}>!</span>
           <span>
-            {disconnected.map((d) => d.plcId).join(', ')} 连接已断开
-            {disconnected[0]?.lastUpdate && (
-              <span style={{ marginLeft: '8px', color: '#bf360c' }}>
-                - 最后更新: {new Date(disconnected[0].lastUpdate).toLocaleTimeString('zh-CN', { hour12: false })}
-              </span>
+            {disconnected.map((d) => plcName(d.plcId)).join(', ')} 连接已断开
+            {disconnected[0]?.error && disconnected[0].error !== '已手动断开' && (
+              <span style={{ marginLeft: '8px', color: '#bf360c' }}>- {disconnected[0].error}</span>
             )}
           </span>
         </div>

@@ -1,56 +1,24 @@
 const fs = require('fs');
 const path = require('path');
 
-// 配置文件路径：exe 同目录下
 let configPath = path.join(__dirname, '..', 'config.json');
 
-// 在 Electron 环境下，config.json 与 exe 同目录
 if (process.env.PORTABLE_EXECUTABLE_DIR) {
   configPath = path.join(process.env.PORTABLE_EXECUTABLE_DIR, 'config.json');
 } else if (process.env.APP_DATA_DIR) {
   configPath = path.join(process.env.APP_DATA_DIR, 'config.json');
 }
 
+const listeners = new Set();
 let configCache = null;
 
-/**
- * 读取完整配置
- */
-function loadConfig() {
-  try {
-    const raw = fs.readFileSync(configPath, 'utf-8');
-    configCache = JSON.parse(raw);
-    return { ...configCache };
-  } catch (err) {
-    console.error('读取配置文件失败:', err.message);
-    // 返回默认配置
-    configCache = getDefaultConfig();
-    return { ...configCache };
-  }
-}
-
-/**
- * 保存完整配置
- */
-function saveConfig(config) {
-  try {
-    configCache = { ...config };
-    fs.writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf-8');
-    return true;
-  } catch (err) {
-    console.error('保存配置文件失败:', err.message);
-    return false;
-  }
-}
-
-/**
- * 获取默认配置
- */
 function getDefaultConfig() {
   return {
     server: {
       port: 3000,
       lanBind: '0.0.0.0',
+      pollIntervalMs: 100,
+      simulation: false,
     },
     plcs: [],
     variables: [],
@@ -58,82 +26,123 @@ function getDefaultConfig() {
   };
 }
 
-/**
- * 获取 PLC 列表
- */
-function getPlcs() {
-  const config = loadConfig();
-  return config.plcs || [];
+function clone(value) {
+  return JSON.parse(JSON.stringify(value));
 }
 
-/**
- * 添加 PLC
- */
-function addPlc(plc) {
+function normalizeConfig(input) {
+  const defaults = getDefaultConfig();
+  const config = { ...defaults, ...(input || {}) };
+  config.server = { ...defaults.server, ...(input?.server || {}) };
+  config.plcs = Array.isArray(input?.plcs) ? input.plcs : [];
+  config.variables = Array.isArray(input?.variables) ? input.variables : [];
+  config.charts = Array.isArray(input?.charts) ? input.charts : [];
+  return config;
+}
+
+function loadConfig() {
+  if (configCache) return clone(configCache);
+  try {
+    const raw = fs.readFileSync(configPath, 'utf-8');
+    configCache = normalizeConfig(JSON.parse(raw));
+  } catch (err) {
+    if (err.code !== 'ENOENT') {
+      console.error('[Config] 读取配置失败:', err.message);
+    }
+    configCache = getDefaultConfig();
+  }
+  return clone(configCache);
+}
+
+function saveConfig(config) {
+  try {
+    const normalized = normalizeConfig(config);
+    const tmpPath = `${configPath}.tmp`;
+    fs.writeFileSync(tmpPath, JSON.stringify(normalized, null, 2), 'utf-8');
+    fs.renameSync(tmpPath, configPath);
+    configCache = normalized;
+    notifyChange();
+    return true;
+  } catch (err) {
+    console.error('[Config] 保存配置失败:', err.message);
+    return false;
+  }
+}
+
+function notifyChange() {
+  const snapshot = loadConfig();
+  for (const fn of listeners) {
+    try { fn(snapshot); } catch (err) {
+      console.error('[Config] 配置变更回调异常:', err.message);
+    }
+  }
+}
+
+function onChange(callback) {
+  listeners.add(callback);
+  return () => listeners.delete(callback);
+}
+
+function getPlcs() {
+  return loadConfig().plcs;
+}
+
+function addPlc(plc = {}) {
   const config = loadConfig();
   const newPlc = {
     id: `plc-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-    name: plc.name || '',
-    ip: plc.ip || '',
-    rack: plc.rack ?? 0,
-    slot: plc.slot ?? 1,
+    name: plc.name || '未命名 PLC',
+    ip: String(plc.ip || '').trim(),
+    rack: Number(plc.rack ?? 0),
+    slot: Number(plc.slot ?? 1),
     description: plc.description || '',
+    simulate: plc.simulate === true,
   };
   config.plcs.push(newPlc);
   saveConfig(config);
   return newPlc;
 }
 
-/**
- * 更新 PLC
- */
-function updatePlc(id, updates) {
+function updatePlc(id, updates = {}) {
   const config = loadConfig();
   const idx = config.plcs.findIndex((p) => p.id === id);
   if (idx === -1) return null;
-  config.plcs[idx] = { ...config.plcs[idx], ...updates, id };
+  const normalized = { ...updates };
+  if ('rack' in normalized) normalized.rack = Number(normalized.rack) || 0;
+  if ('slot' in normalized) normalized.slot = Number(normalized.slot) || 0;
+  if ('simulate' in normalized) normalized.simulate = normalized.simulate === true;
+  config.plcs[idx] = { ...config.plcs[idx], ...normalized, id };
   saveConfig(config);
   return config.plcs[idx];
 }
 
-/**
- * 删除 PLC
- */
 function deletePlc(id) {
   const config = loadConfig();
+  const variableIds = new Set(
+    config.variables.filter((v) => v.plcId === id).map((v) => v.id)
+  );
   config.plcs = config.plcs.filter((p) => p.id !== id);
-  // 同时删除关联的变量和图表引用
   config.variables = config.variables.filter((v) => v.plcId !== id);
-  config.charts.forEach((chart) => {
-    chart.variableIds = chart.variableIds.filter((vid) => {
-      const varDef = config.variables.find((v) => v.id === vid);
-      return varDef && varDef.plcId !== id;
-    });
-  });
+  config.charts = config.charts
+    .filter((c) => c.plcId !== id)
+    .map((c) => ({ ...c, variableIds: (c.variableIds || []).filter((vid) => !variableIds.has(vid)) }));
   saveConfig(config);
   return true;
 }
 
-/**
- * 获取变量列表
- */
 function getVariables() {
-  const config = loadConfig();
-  return config.variables || [];
+  return loadConfig().variables;
 }
 
-/**
- * 添加变量
- */
-function addVariable(variable) {
+function addVariable(variable = {}) {
   const config = loadConfig();
   const newVar = {
     id: `var-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
     plcId: variable.plcId || '',
-    name: variable.name || '',
+    name: variable.name || '未命名变量',
     addressType: variable.addressType || 'DB',
-    dbNumber: variable.dbNumber ?? 1,
-    offset: variable.offset ?? 0,
+    dbNumber: Number(variable.dbNumber ?? 1),
+    offset: Number(variable.offset ?? 0),
     dataType: variable.dataType || 'Real',
     bitIndex: variable.bitIndex ?? null,
     unit: variable.unit || '',
@@ -144,64 +153,61 @@ function addVariable(variable) {
   return newVar;
 }
 
-/**
- * 更新变量
- */
-function updateVariable(id, updates) {
+function updateVariable(id, updates = {}) {
   const config = loadConfig();
   const idx = config.variables.findIndex((v) => v.id === id);
   if (idx === -1) return null;
-  config.variables[idx] = { ...config.variables[idx], ...updates, id };
+  const normalized = { ...updates };
+  if ('dbNumber' in normalized) normalized.dbNumber = Number(normalized.dbNumber) || 1;
+  if ('offset' in normalized) normalized.offset = Number(normalized.offset) || 0;
+  if ('bitIndex' in normalized) {
+    normalized.bitIndex = normalized.bitIndex === '' || normalized.bitIndex == null
+      ? null
+      : Number(normalized.bitIndex);
+  }
+  config.variables[idx] = { ...config.variables[idx], ...normalized, id };
   saveConfig(config);
   return config.variables[idx];
 }
 
-/**
- * 删除变量
- */
 function deleteVariable(id) {
   const config = loadConfig();
   config.variables = config.variables.filter((v) => v.id !== id);
-  // 同时删除图表中的引用
-  config.charts.forEach((chart) => {
-    chart.variableIds = chart.variableIds.filter((vid) => vid !== id);
-    if (chart.curveColors) {
-      delete chart.curveColors[id];
-    }
+  config.charts = config.charts.map((chart) => {
+    const curveColors = { ...(chart.curveColors || {}) };
+    delete curveColors[id];
+    return {
+      ...chart,
+      variableIds: (chart.variableIds || []).filter((vid) => vid !== id),
+      curveColors,
+    };
   });
   saveConfig(config);
   return true;
 }
 
-/**
- * 获取图表布局列表
- */
 function getCharts() {
-  const config = loadConfig();
-  return config.charts || [];
+  return loadConfig().charts;
 }
 
-/**
- * 添加图表
- */
-function addChart(chart) {
+function addChart(chart = {}) {
   const config = loadConfig();
   const newChart = {
     id: `chart-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-    title: chart.title || '',
+    plcId: chart.plcId || '',
+    title: chart.title || '未命名图表',
     variableIds: chart.variableIds || [],
     curveColors: chart.curveColors || {},
-    timeWindow: chart.timeWindow ?? 30,
+    timeWindow: Number(chart.timeWindow ?? 30),
+    yAxisMin: chart.yAxisMin ?? '',
+    yAxisMax: chart.yAxisMax ?? '',
   };
   config.charts.push(newChart);
   saveConfig(config);
   return newChart;
 }
 
-/**
- * 更新图表
- */
-function updateChart(id, updates) {
+function updateChart(id, updates = {}) {
   const config = loadConfig();
   const idx = config.charts.findIndex((c) => c.id === id);
   if (idx === -1) return null;
@@ -210,9 +216,6 @@ function updateChart(id, updates) {
   return config.charts[idx];
 }
 
-/**
- * 删除图表
- */
 function deleteChart(id) {
   const config = loadConfig();
   config.charts = config.charts.filter((c) => c.id !== id);
@@ -220,10 +223,15 @@ function deleteChart(id) {
   return true;
 }
 
+function getConfigPath() {
+  return configPath;
+}
+
 module.exports = {
   loadConfig,
   saveConfig,
   getDefaultConfig,
+  onChange,
   getPlcs,
   addPlc,
   updatePlc,
@@ -236,4 +244,5 @@ module.exports = {
   addChart,
   updateChart,
   deleteChart,
+  getConfigPath,
 };
