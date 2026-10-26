@@ -30,20 +30,44 @@ function clone(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
+function normalizeAxesList(axes) {
+  if (!Array.isArray(axes)) return [];
+  return axes
+    .filter((axis) => axis && Array.isArray(axis.variableIds) && axis.variableIds.length > 0)
+    .map((axis, idx) => ({
+      id: axis.id || `axis-${idx + 1}`,
+      name: axis.name || `坐标轴 ${idx + 1}`,
+      min: axis.min ?? '',
+      max: axis.max ?? '',
+      variableIds: [...new Set(axis.variableIds)],
+    }));
+}
+
 function normalizeConfig(input) {
   const defaults = getDefaultConfig();
   const config = { ...defaults, ...(input || {}) };
   config.server = { ...defaults.server, ...(input?.server || {}) };
   config.plcs = Array.isArray(input?.plcs) ? input.plcs : [];
   config.variables = Array.isArray(input?.variables) ? input.variables : [];
-  config.charts = Array.isArray(input?.charts) ? input.charts : [];
+  config.charts = (Array.isArray(input?.charts) ? input.charts : []).map((chart) => {
+    if (!Array.isArray(chart.axes)) return chart;
+    const axes = normalizeAxesList(chart.axes);
+    return {
+      ...chart,
+      axes,
+      variableIds: axes.length > 0
+        ? [...new Set(axes.flatMap((axis) => axis.variableIds))]
+        : chart.variableIds || [],
+    };
+  });
   return config;
 }
 
 function loadConfig() {
   if (configCache) return clone(configCache);
   try {
-    const raw = fs.readFileSync(configPath, 'utf-8');
+    // Windows 记事本等编辑器可能写入 BOM，需要先剥离
+    const raw = fs.readFileSync(configPath, 'utf-8').replace(/^\uFEFF/, '');
     configCache = normalizeConfig(JSON.parse(raw));
   } catch (err) {
     if (err.code !== 'ENOENT') {
@@ -192,15 +216,15 @@ function getCharts() {
 
 function addChart(chart = {}) {
   const config = loadConfig();
+  const axes = Array.isArray(chart.axes) ? chart.axes : [];
   const newChart = {
     id: `chart-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
     plcId: chart.plcId || '',
     title: chart.title || '未命名图表',
-    variableIds: chart.variableIds || [],
+    variableIds: chart.variableIds || [...new Set(axes.flatMap((axis) => axis.variableIds || []))],
+    axes,
     curveColors: chart.curveColors || {},
     timeWindow: Number(chart.timeWindow ?? 30),
-    yAxisMin: chart.yAxisMin ?? '',
-    yAxisMax: chart.yAxisMax ?? '',
   };
   config.charts.push(newChart);
   saveConfig(config);
@@ -211,7 +235,12 @@ function updateChart(id, updates = {}) {
   const config = loadConfig();
   const idx = config.charts.findIndex((c) => c.id === id);
   if (idx === -1) return null;
-  config.charts[idx] = { ...config.charts[idx], ...updates, id };
+  const merged = { ...config.charts[idx], ...updates, id };
+  if (Array.isArray(updates.axes)) {
+    merged.axes = normalizeAxesList(updates.axes);
+    merged.variableIds = [...new Set(merged.axes.flatMap((axis) => axis.variableIds))];
+  }
+  config.charts[idx] = merged;
   saveConfig(config);
   return config.charts[idx];
 }

@@ -2,13 +2,15 @@ import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import useSocket from '../hooks/useSocket';
 import RealtimeChart from '../components/RealtimeChart';
 import ConnectionStatus from '../components/ConnectionStatus';
+import ThemeToggle from '../components/ThemeToggle';
 import NotificationToast, { useToast } from '../components/NotificationToast';
 import { formatValue } from '../utils/chartOptions';
-import { colors, radius, header, brand, brandMark, button, select, dot } from '../styles/theme';
+import { useTheme } from '../context/ThemeContext';
+import { colors, radius, header, brand, brandMark, button, dot, chartPalettes } from '../styles/theme';
 
-// 30 分钟 @ 10Hz
 const MAX_POINTS = 18000;
 const HISTORY_WINDOW_MS = 30 * 60 * 1000;
+const DEFAULT_CHART = { id: 'default', title: '实时数据', timeWindow: 30, axes: [] };
 
 const styles = {
   container: {
@@ -18,35 +20,16 @@ const styles = {
     overflow: 'hidden',
     backgroundColor: colors.bg,
   },
-  headerLeft: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '14px',
-  },
-  divider: {
-    width: '1px',
-    height: '20px',
-    backgroundColor: colors.border,
-  },
-  headerRight: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '14px',
-  },
+  headerLeft: { display: 'flex', alignItems: 'center', gap: '14px' },
+  divider: { width: '1px', height: '20px', backgroundColor: colors.border },
+  headerRight: { display: 'flex', alignItems: 'center', gap: '10px' },
   socketBadge: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '6px',
-    fontSize: '12px',
-    color: colors.textSecondary,
+    display: 'flex', alignItems: 'center', gap: '6px',
+    fontSize: '12px', color: colors.textSecondary, marginRight: '4px',
   },
-  body: {
-    display: 'flex',
-    flex: 1,
-    overflow: 'hidden',
-  },
+  body: { display: 'flex', flex: 1, overflow: 'hidden' },
   sidebar: {
-    width: '264px',
+    width: '272px',
     backgroundColor: colors.surface,
     borderRight: `1px solid ${colors.border}`,
     display: 'flex',
@@ -55,142 +38,74 @@ const styles = {
     overflow: 'hidden',
   },
   sidebarHeader: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: '16px 16px 10px',
-    fontSize: '11px',
-    fontWeight: 600,
-    letterSpacing: '0.06em',
-    textTransform: 'uppercase',
-    color: colors.textMuted,
+    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+    padding: '16px 16px 10px', fontSize: '11px', fontWeight: 600,
+    letterSpacing: '0.06em', textTransform: 'uppercase', color: colors.textMuted,
   },
   plcCard: {
-    margin: '0 12px 8px',
-    padding: '10px 12px',
-    border: `1px solid ${colors.border}`,
-    borderRadius: radius.md,
+    margin: '0 12px 8px', padding: '10px 12px',
+    border: `1px solid ${colors.border}`, borderRadius: radius.md,
     backgroundColor: colors.surfaceMuted,
   },
-  plcCardTop: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: '8px',
-  },
+  plcCardTop: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' },
   plcName: {
-    fontSize: '13px',
-    fontWeight: 600,
-    color: colors.text,
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-    whiteSpace: 'nowrap',
+    fontSize: '13px', fontWeight: 600, color: colors.text,
+    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
   },
-  statusText: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '5px',
-    fontSize: '11px',
-    color: colors.textSecondary,
-  },
-  plcCardBottom: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: '8px',
-  },
+  statusText: { display: 'flex', alignItems: 'center', gap: '5px', fontSize: '11px', color: colors.textSecondary },
+  plcCardBottom: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '8px' },
   plcAddress: {
-    fontSize: '11px',
-    color: colors.textMuted,
+    fontSize: '11px', color: colors.textMuted,
     fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
   },
-  variableList: {
-    flex: 1,
-    overflowY: 'auto',
-    padding: '4px 8px 12px',
+  listHint: {
+    padding: '2px 16px 8px', fontSize: '11px', color: colors.textMuted,
   },
+  variableList: { flex: 1, overflowY: 'auto', padding: '2px 8px 12px' },
   variableRow: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    height: '36px',
-    padding: '0 8px',
-    borderRadius: radius.sm,
-    cursor: 'pointer',
-    fontSize: '13px',
-    color: colors.textSecondary,
+    display: 'flex', alignItems: 'center', gap: '8px', height: '36px',
+    padding: '0 8px', borderRadius: radius.sm, cursor: 'grab',
+    fontSize: '13px', color: colors.textSecondary, userSelect: 'none',
   },
-  variableRowActive: {
-    color: colors.text,
-  },
-  checkbox: {
-    width: '14px',
-    height: '14px',
-    cursor: 'pointer',
-    accentColor: colors.text,
-    flexShrink: 0,
-  },
+  variableRowActive: { color: colors.text },
+  variableRowDragging: { opacity: 0.45 },
+  checkbox: { width: '14px', height: '14px', cursor: 'pointer', accentColor: colors.text, flexShrink: 0 },
   variableValue: {
-    marginLeft: 'auto',
-    fontSize: '12px',
-    fontWeight: 500,
-    color: colors.text,
+    marginLeft: 'auto', fontSize: '12px', fontWeight: 500, color: colors.text,
     fontVariantNumeric: 'tabular-nums',
   },
-  sidebarEmpty: {
-    padding: '20px 16px',
-    color: colors.textMuted,
-    fontSize: '12px',
-    textAlign: 'center',
-    lineHeight: 1.7,
-  },
-  content: {
-    flex: 1,
-    display: 'flex',
-    flexDirection: 'column',
-    overflowY: 'auto',
-    padding: '20px 24px 28px',
-  },
-  toolbar: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '12px',
-    marginBottom: '16px',
-    flexWrap: 'wrap',
-  },
+  grip: { color: colors.textMuted, flexShrink: 0, display: 'flex' },
+  sidebarEmpty: { padding: '20px 16px', color: colors.textMuted, fontSize: '12px', textAlign: 'center', lineHeight: 1.7 },
+  content: { flex: 1, display: 'flex', flexDirection: 'column', overflowY: 'auto', padding: '20px 24px 28px' },
+  toolbar: { display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px', flexWrap: 'wrap' },
   segmented: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    padding: '2px',
-    border: `1px solid ${colors.border}`,
-    borderRadius: radius.md,
-    backgroundColor: colors.surface,
+    display: 'inline-flex', alignItems: 'center', padding: '2px',
+    border: `1px solid ${colors.border}`, borderRadius: radius.md, backgroundColor: colors.surface,
   },
   segBtn: {
-    height: '26px',
-    padding: '0 12px',
-    border: 'none',
-    borderRadius: radius.sm,
-    backgroundColor: 'transparent',
-    color: colors.textSecondary,
-    cursor: 'pointer',
-    fontSize: '12px',
-    fontWeight: 500,
+    height: '26px', padding: '0 12px', border: 'none', borderRadius: radius.sm,
+    backgroundColor: 'transparent', color: colors.textSecondary, cursor: 'pointer',
+    fontSize: '12px', fontWeight: 500,
   },
-  segBtnActive: {
-    backgroundColor: colors.text,
-    color: '#ffffff',
+  segBtnActive: { backgroundColor: colors.text, color: colors.bg },
+  chartGroup: { marginBottom: '4px' },
+  chartGroupTitle: {
+    fontSize: '11px', fontWeight: 600, color: colors.textMuted,
+    letterSpacing: '0.05em', textTransform: 'uppercase', margin: '4px 2px 8px',
+  },
+  dropZone: {
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    minHeight: '56px', marginBottom: '12px',
+    border: `1px dashed ${colors.borderStrong}`, borderRadius: radius.md,
+    color: colors.textMuted, fontSize: '12px', cursor: 'default',
+  },
+  dropZoneActive: {
+    borderColor: 'var(--accent)', color: colors.accent, backgroundColor: colors.accentSoft,
   },
   emptyState: {
-    flex: 1,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    color: colors.textMuted,
-    fontSize: '13px',
-    border: `1px dashed ${colors.borderStrong}`,
-    borderRadius: radius.lg,
-    minHeight: '240px',
+    flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
+    color: colors.textMuted, fontSize: '13px',
+    border: `1px dashed ${colors.borderStrong}`, borderRadius: radius.lg, minHeight: '240px',
   },
 };
 
@@ -211,24 +126,110 @@ function appendData(buffer, rows, timestamp) {
   }
 }
 
+export function normalizeAxes(chart) {
+  if (Array.isArray(chart.axes)) {
+    return chart.axes
+      .map((axis, idx) => ({
+        id: axis.id || `axis-${idx + 1}`,
+        name: axis.name || `坐标轴 ${idx + 1}`,
+        min: axis.min ?? '',
+        max: axis.max ?? '',
+        variableIds: Array.isArray(axis.variableIds) ? axis.variableIds : [],
+      }))
+      // 空坐标轴不保留，避免拖走变量后残留占位
+      .filter((axis) => axis.variableIds.length > 0);
+  }
+  const variableIds = chart.variableIds || [];
+  if (variableIds.length === 0) return [];
+  return [{
+    id: `${chart.id || 'chart'}-axis-1`,
+    name: '坐标轴 1',
+    min: chart.yAxisMin ?? '',
+    max: chart.yAxisMax ?? '',
+    variableIds,
+  }];
+}
+
+function GripIcon() {
+  return (
+    <svg width="10" height="14" viewBox="0 0 10 14" fill="currentColor" aria-hidden="true">
+      <circle cx="3" cy="3" r="1" /><circle cx="7" cy="3" r="1" />
+      <circle cx="3" cy="7" r="1" /><circle cx="7" cy="7" r="1" />
+      <circle cx="3" cy="11" r="1" /><circle cx="7" cy="11" r="1" />
+    </svg>
+  );
+}
+
+function DropZone({ onDropVariable, label }) {
+  const [over, setOver] = useState(false);
+  const [dragging, setDragging] = useState(false);
+
+  useEffect(() => {
+    const start = () => setDragging(true);
+    const end = () => setDragging(false);
+    window.addEventListener('plcm-drag-start', start);
+    window.addEventListener('plcm-drag-end', end);
+    return () => {
+      window.removeEventListener('plcm-drag-start', start);
+      window.removeEventListener('plcm-drag-end', end);
+    };
+  }, []);
+
+  return (
+    <div
+      style={{
+        ...styles.dropZone,
+        ...(over ? styles.dropZoneActive : {}),
+        ...(dragging && !over ? { borderColor: colors.accent } : {}),
+      }}
+      onDragOver={(e) => {
+        if (e.dataTransfer.types.includes('text/plain')) {
+          e.preventDefault();
+          setOver(true);
+        }
+      }}
+      onDragLeave={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget)) setOver(false);
+      }}
+      onDrop={(e) => {
+        e.preventDefault();
+        setOver(false);
+        const vid = e.dataTransfer.getData('text/plain');
+        if (vid) onDropVariable(vid);
+      }}
+    >
+      {label}
+    </div>
+  );
+}
+
 export default function Dashboard({ onNavigate }) {
   const socket = useSocket();
+  const { theme } = useTheme();
+  const palette = chartPalettes[theme] || chartPalettes.light;
   const { toasts, addToast, removeToast } = useToast();
+
   const [config, setConfig] = useState(null);
   const [activePlcId, setActivePlcId] = useState(null);
-  const [selectedVariables, setSelectedVariables] = useState(() => new Set());
+  const [visibleVariables, setVisibleVariables] = useState(() => new Set());
   const [connectingPlcs, setConnectingPlcs] = useState(() => new Set());
   const [timeWindow, setTimeWindow] = useState(30);
   const [bufferData, setBufferData] = useState(() => new Map());
   const [paused, setPaused] = useState(false);
+  const [draggingVariable, setDraggingVariable] = useState(null);
+  const [savingLayout, setSavingLayout] = useState(false);
 
   const pausedRef = useRef(false);
   const pausedQueueRef = useRef([]);
   const prevConnectedRef = useRef(new Map());
+  const configRef = useRef(null);
+  const saveTimersRef = useRef(new Map());
 
   useEffect(() => {
-    pausedRef.current = paused;
-  }, [paused]);
+    configRef.current = config;
+  }, [config]);
+
+  useEffect(() => { pausedRef.current = paused; }, [paused]);
 
   const mergeHistory = useCallback((entries) => {
     setBufferData((prev) => {
@@ -242,12 +243,7 @@ export default function Dashboard({ onNavigate }) {
         const merged = new Map();
         for (const row of next.get(vid) || []) merged.set(row.timestamp, row);
         for (const row of incoming.values()) merged.set(row.timestamp, row);
-        next.set(
-          vid,
-          Array.from(merged.values())
-            .sort((a, b) => a.timestamp - b.timestamp)
-            .slice(-MAX_POINTS)
-        );
+        next.set(vid, Array.from(merged.values()).sort((a, b) => a.timestamp - b.timestamp).slice(-MAX_POINTS));
       }
       return next;
     });
@@ -262,12 +258,13 @@ export default function Dashboard({ onNavigate }) {
       })
       .then((cfg) => {
         if (cancelled) return;
+        configRef.current = cfg;
         setConfig(cfg);
         const firstPlc = cfg.plcs?.[0];
         if (firstPlc) {
           setActivePlcId(firstPlc.id);
           const ids = (cfg.variables || []).filter((v) => v.plcId === firstPlc.id).map((v) => v.id);
-          setSelectedVariables(new Set(ids));
+          setVisibleVariables(new Set(ids));
         }
       })
       .catch((err) => {
@@ -335,7 +332,7 @@ export default function Dashboard({ onNavigate }) {
   const handlePlcChange = useCallback((plcId) => {
     setActivePlcId(plcId);
     const plcVars = (config?.variables || []).filter((v) => v.plcId === plcId);
-    setSelectedVariables(new Set(plcVars.map((v) => v.id)));
+    setVisibleVariables(new Set(plcVars.map((v) => v.id)));
     setBufferData(new Map());
     pausedQueueRef.current = [];
   }, [config]);
@@ -366,15 +363,6 @@ export default function Dashboard({ onNavigate }) {
     addToast(`${plcName(plcId)} 已断开`, 'info', 3000);
   }, [socket, addToast, plcName]);
 
-  const toggleVariable = useCallback((varId) => {
-    setSelectedVariables((prev) => {
-      const next = new Set(prev);
-      if (next.has(varId)) next.delete(varId);
-      else next.add(varId);
-      return next;
-    });
-  }, []);
-
   const togglePause = () => {
     if (paused) {
       const queue = pausedQueueRef.current;
@@ -395,34 +383,211 @@ export default function Dashboard({ onNavigate }) {
     [config, activePlcId]
   );
 
-  const activePlcCharts = useMemo(
-    () => (config?.charts || []).filter((chart) => chart.plcId === activePlcId),
-    [config, activePlcId]
+  const plcCharts = useMemo(() => {
+    const charts = (config?.charts || []).filter((chart) => chart.plcId === activePlcId);
+    return charts.length > 0 ? charts : [{ ...DEFAULT_CHART, plcId: activePlcId }];
+  }, [config, activePlcId]);
+
+  const chartGroups = useMemo(
+    () => plcCharts.map((chart) => ({ chart, axes: normalizeAxes(chart) })),
+    [plcCharts]
   );
 
-  const chartsToRender = useMemo(() => {
-    const withSelected = activePlcCharts.filter((chart) =>
-      (chart.variableIds || []).some((vid) => selectedVariables.has(vid))
-    );
-    if (withSelected.length > 0) return withSelected;
+  const renderedGroups = useMemo(
+    () => chartGroups.map(({ chart, axes }) => ({
+      chart,
+      axes: axes.map((axis) => ({
+        ...axis,
+        allVariableIds: axis.variableIds,
+        variableIds: axis.variableIds.filter((vid) => visibleVariables.has(vid)),
+      })),
+    })),
+    [chartGroups, visibleVariables]
+  );
 
-    const selected = activePlcVars.filter((v) => selectedVariables.has(v.id)).map((v) => v.id);
-    if (selected.length === 0) return [];
-    return [{
-      id: 'default',
-      title: '实时数据',
-      variableIds: selected,
-      curveColors: {},
-      timeWindow,
-    }];
-  }, [activePlcCharts, activePlcVars, selectedVariables, timeWindow]);
+  const getChartGroup = useCallback((chartId) => {
+    const cfg = configRef.current;
+    const chart = cfg?.charts?.find((c) => c.id === chartId);
+    if (chart) return { chart, axes: normalizeAxes(chart) };
+    if (chartId === 'default') return { chart: { ...DEFAULT_CHART, plcId: activePlcId }, axes: [] };
+    return null;
+  }, [activePlcId]);
+
+  const applyAxesLocally = useCallback((chartId, axes) => {
+    const prev = configRef.current;
+    if (!prev) return;
+    const variableIds = [...new Set(axes.flatMap((axis) => axis.variableIds))];
+    const next = {
+      ...prev,
+      charts: prev.charts.map((c) => (
+        c.id === chartId ? { ...c, axes, variableIds } : c
+      )),
+    };
+    configRef.current = next;
+    setConfig(next);
+  }, []);
+
+  const persistChart = useCallback((chart, axes) => {
+    if (chart.id !== 'default') applyAxesLocally(chart.id, axes);
+
+    const pending = saveTimersRef.current.get(chart.id);
+    if (pending) clearTimeout(pending);
+
+    const run = async () => {
+      saveTimersRef.current.delete(chart.id);
+      setSavingLayout(true);
+      try {
+        const payload = {
+          axes,
+          variableIds: axes.flatMap((axis) => axis.variableIds),
+          timeWindow: chart.timeWindow ?? timeWindow,
+        };
+        if (chart.id === 'default') {
+          payload.plcId = activePlcId;
+          payload.title = chart.title || '实时数据';
+        }
+        const res = await fetch(
+          chart.id === 'default' ? '/api/charts' : `/api/charts/${chart.id}`,
+          {
+            method: chart.id === 'default' ? 'POST' : 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          }
+        );
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const saved = await res.json();
+        const prev = configRef.current;
+        if (prev) {
+          const exists = prev.charts.some((c) => c.id === saved.id);
+          const next = {
+            ...prev,
+            charts: exists
+              ? prev.charts.map((c) => (c.id === saved.id ? { ...c, ...saved, axes } : c))
+              : [...prev.charts, { ...saved, axes }],
+          };
+          configRef.current = next;
+          setConfig(next);
+        }
+      } catch (err) {
+        console.error('保存图表布局失败:', err);
+        addToast(`保存布局失败：${err.message}`, 'error', 5000);
+      } finally {
+        setSavingLayout(false);
+      }
+    };
+
+    const timer = setTimeout(run, chart.id === 'default' ? 0 : 250);
+    saveTimersRef.current.set(chart.id, timer);
+  }, [activePlcId, timeWindow, addToast, applyAxesLocally]);
+
+  useEffect(() => () => {
+    for (const timer of saveTimersRef.current.values()) clearTimeout(timer);
+    saveTimersRef.current.clear();
+  }, []);
+
+  const pruneAxes = useCallback(
+    (axes) => axes.filter((axis) => (axis.variableIds || []).length > 0),
+    []
+  );
+
+  const removeVariableFromOtherCharts = useCallback((variableId, exceptChartId) => {
+    const charts = configRef.current?.charts || [];
+    for (const chart of charts) {
+      if (chart.id === exceptChartId) continue;
+      const axes = normalizeAxes(chart);
+      if (!axes.some((axis) => axis.variableIds.includes(variableId))) continue;
+      persistChart(chart, pruneAxes(axes.map((axis) => ({
+        ...axis,
+        variableIds: axis.variableIds.filter((vid) => vid !== variableId),
+      }))));
+    }
+  }, [persistChart, pruneAxes]);
+
+  const assignVariable = useCallback((variableId, targetChartId, targetAxisId) => {
+    const target = getChartGroup(targetChartId);
+    if (!target) return;
+
+    const targetAxes = target.axes.map((axis) => {
+      if (axis.id === targetAxisId) {
+        return { ...axis, variableIds: [...new Set([...axis.variableIds, variableId])] };
+      }
+      return { ...axis, variableIds: axis.variableIds.filter((vid) => vid !== variableId) };
+    });
+
+    persistChart(target.chart, pruneAxes(targetAxes));
+    setVisibleVariables((prev) => new Set(prev).add(variableId));
+    removeVariableFromOtherCharts(variableId, targetChartId);
+  }, [getChartGroup, persistChart, removeVariableFromOtherCharts, pruneAxes]);
+
+  const createAxisWithVariable = useCallback((chartId, variableId) => {
+    const target = getChartGroup(chartId);
+    if (!target) return;
+    const axis = {
+      id: `axis-${Date.now()}`,
+      name: `坐标轴 ${target.axes.length + 1}`,
+      min: '',
+      max: '',
+      variableIds: [variableId],
+    };
+    const remainingAxes = target.axes.map((item) => ({
+      ...item,
+      variableIds: item.variableIds.filter((vid) => vid !== variableId),
+    }));
+    persistChart(target.chart, pruneAxes([...remainingAxes, axis]));
+    setVisibleVariables((prev) => new Set(prev).add(variableId));
+    removeVariableFromOtherCharts(variableId, chartId);
+  }, [getChartGroup, persistChart, removeVariableFromOtherCharts, pruneAxes]);
+
+  const updateAxis = useCallback((chartId, axisId, patch) => {
+    const target = getChartGroup(chartId);
+    if (!target) return;
+    const axes = target.axes.map((axis) => (axis.id === axisId ? { ...axis, ...patch } : axis));
+    persistChart(target.chart, axes);
+  }, [getChartGroup, persistChart]);
+
+  const removeAxis = useCallback((chartId, axisId) => {
+    const target = getChartGroup(chartId);
+    if (!target) return;
+    persistChart(target.chart, target.axes.filter((axis) => axis.id !== axisId));
+  }, [getChartGroup, persistChart]);
+
+  const removeVariable = useCallback((chartId, axisId, variableId) => {
+    const target = getChartGroup(chartId);
+    if (!target) return;
+    const axes = target.axes.map((axis) =>
+      axis.id === axisId
+        ? { ...axis, variableIds: axis.variableIds.filter((vid) => vid !== variableId) }
+        : axis
+    );
+    persistChart(target.chart, pruneAxes(axes));
+  }, [getChartGroup, persistChart, pruneAxes]);
+
+  const toggleVariable = useCallback((variableId) => {
+    setVisibleVariables((prev) => {
+      const next = new Set(prev);
+      if (next.has(variableId)) {
+        next.delete(variableId);
+      } else {
+        next.add(variableId);
+      }
+      return next;
+    });
+  }, []);
+
+  const handleDragStart = useCallback((event, variableId) => {
+    event.dataTransfer.setData('text/plain', variableId);
+    event.dataTransfer.effectAllowed = 'copy';
+    setDraggingVariable(variableId);
+    window.dispatchEvent(new Event('plcm-drag-start'));
+  }, []);
+
+  const handleDragEnd = useCallback(() => {
+    setDraggingVariable(null);
+    window.dispatchEvent(new Event('plcm-drag-end'));
+  }, []);
 
   if (!config) {
-    return (
-      <div style={{ ...styles.emptyState, height: '100vh', border: 'none' }}>
-        正在加载配置...
-      </div>
-    );
+    return <div style={{ ...styles.emptyState, height: '100vh', border: 'none' }}>正在加载配置...</div>;
   }
 
   const activePlc = config.plcs?.find((p) => p.id === activePlcId);
@@ -442,7 +607,8 @@ export default function Dashboard({ onNavigate }) {
           </div>
           <span style={styles.divider} />
           <select
-            style={{ ...select, minWidth: '150px' }}
+            className="ui-select"
+            style={{ minWidth: '160px' }}
             value={activePlcId || ''}
             onChange={(e) => handlePlcChange(e.target.value)}
             aria-label="选择 PLC"
@@ -454,13 +620,10 @@ export default function Dashboard({ onNavigate }) {
         </div>
         <div style={styles.headerRight}>
           <span style={styles.socketBadge}>
-            <span style={dot(
-              socket.connected === null
-                ? colors.warning
-                : socket.connected ? colors.success : colors.danger
-            )} />
+            <span style={dot(socket.connected === null ? colors.warning : socket.connected ? colors.success : colors.danger)} />
             {socket.connected === null ? '连接中' : socket.connected ? '服务在线' : '服务离线'}
           </span>
+          <ThemeToggle />
           <button style={button.ghost} onClick={() => onNavigate('config')}>配置</button>
         </div>
       </header>
@@ -475,9 +638,7 @@ export default function Dashboard({ onNavigate }) {
         <aside style={styles.sidebar}>
           <div style={styles.sidebarHeader}>
             <span>监视变量</span>
-            <span style={{ letterSpacing: 0, textTransform: 'none', fontWeight: 500 }}>
-              {activePlcVars.length}
-            </span>
+            <span style={{ letterSpacing: 0, textTransform: 'none', fontWeight: 500 }}>{activePlcVars.length}</span>
           </div>
 
           {activePlc && (
@@ -492,18 +653,11 @@ export default function Dashboard({ onNavigate }) {
               <div style={styles.plcCardBottom}>
                 <span style={styles.plcAddress}>{activePlc.ip}</span>
                 {isConnected ? (
-                  <button
-                    style={{ ...button.subtle, color: colors.danger, padding: '0 4px' }}
-                    onClick={() => handleDisconnect(activePlcId)}
-                  >
+                  <button style={{ ...button.subtle, color: colors.danger, padding: '0 4px' }} onClick={() => handleDisconnect(activePlcId)}>
                     断开
                   </button>
                 ) : (
-                  <button
-                    style={{ ...button.subtle, color: colors.accent, padding: '0 4px' }}
-                    onClick={() => handleConnect(activePlcId)}
-                    disabled={isConnecting}
-                  >
+                  <button style={{ ...button.subtle, color: colors.accent, padding: '0 4px' }} onClick={() => handleConnect(activePlcId)} disabled={isConnecting}>
                     {isConnecting ? '连接中...' : '连接'}
                   </button>
                 )}
@@ -511,27 +665,36 @@ export default function Dashboard({ onNavigate }) {
             </div>
           )}
 
+          <div style={styles.listHint}>拖到右侧图表可分配坐标轴</div>
+
           <div style={styles.variableList}>
             {activePlcVars.map((v) => {
               const data = bufferData.get(v.id);
               const latest = data && data.length > 0 ? data[data.length - 1] : null;
-              const active = selectedVariables.has(v.id);
+              const active = visibleVariables.has(v.id);
               return (
                 <div
                   key={v.id}
-                  style={{ ...styles.variableRow, ...(active ? styles.variableRowActive : {}) }}
-                  onClick={() => toggleVariable(v.id)}
+                  draggable
+                  style={{
+                    ...styles.variableRow,
+                    ...(active ? styles.variableRowActive : {}),
+                    ...(draggingVariable === v.id ? styles.variableRowDragging : {}),
+                  }}
+                  onDragStart={(e) => handleDragStart(e, v.id)}
+                  onDragEnd={handleDragEnd}
+                  title="拖到右侧图表"
                 >
                   <input
                     type="checkbox"
                     style={styles.checkbox}
                     checked={active}
                     onChange={() => toggleVariable(v.id)}
-                    onClick={(e) => e.stopPropagation()}
-                    aria-label={`监视 ${v.name}`}
+                    aria-label={`显示 ${v.name}`}
                   />
-                  <span>{v.name}</span>
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{v.name}</span>
                   <span style={styles.variableValue}>{formatValue(latest?.value)}</span>
+                  <span style={styles.grip}><GripIcon /></span>
                 </div>
               );
             })}
@@ -559,25 +722,38 @@ export default function Dashboard({ onNavigate }) {
               ))}
             </div>
             <div style={{ flex: 1 }} />
-            <button style={button.ghost} onClick={togglePause}>
-              {paused ? '继续采集' : '暂停'}
-            </button>
+            {savingLayout && <span style={{ fontSize: '11px', color: colors.textMuted }}>保存布局中...</span>}
+            <button style={button.ghost} onClick={togglePause}>{paused ? '继续采集' : '暂停'}</button>
           </div>
 
-          {selectedVariables.size === 0 || chartsToRender.length === 0 ? (
-            <div style={styles.emptyState}>请在左侧选择要监视的变量</div>
-          ) : (
-            chartsToRender.map((chart) => (
-              <RealtimeChart
-                key={chart.id}
-                chartDef={chart}
-                variables={activePlcVars}
-                bufferData={bufferData}
-                timeWindow={timeWindow}
-                connected={isConnected || !statusKnown}
+          {renderedGroups.map(({ chart, axes }) => (
+            <div key={chart.id} style={styles.chartGroup}>
+              {renderedGroups.length > 1 && <div style={styles.chartGroupTitle}>{chart.title || '图表'}</div>}
+
+              {axes.map((axis, idx) => (
+                <RealtimeChart
+                  key={axis.id}
+                  chartDef={chart}
+                  axis={axis}
+                  axisIndex={idx}
+                  variables={activePlcVars}
+                  bufferData={bufferData}
+                  timeWindow={timeWindow}
+                  connected={isConnected || !statusKnown}
+                  palette={palette}
+                  onUpdateAxis={(axisId, patch) => updateAxis(chart.id, axisId, patch)}
+                  onRemoveAxis={(axisId) => removeAxis(chart.id, axisId)}
+                  onRemoveVariable={(axisId, vid) => removeVariable(chart.id, axisId, vid)}
+                  onDropVariable={(vid, axisId) => assignVariable(vid, chart.id, axisId)}
+                />
+              ))}
+
+              <DropZone
+                label={axes.length === 0 ? '拖动左侧变量到此处创建坐标轴' : '拖动变量到此处新建坐标轴'}
+                onDropVariable={(vid) => createAxisWithVariable(chart.id, vid)}
               />
-            ))
-          )}
+            </div>
+          ))}
         </main>
       </div>
 

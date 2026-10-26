@@ -5,35 +5,153 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>PLCMonitor</title>
     <style>
+      :root {
+        color-scheme: light;
+        --bg: #f4f5f7;
+        --surface: #ffffff;
+        --surface-muted: #f9fafb;
+        --border: #e4e7ec;
+        --border-strong: #d0d5dd;
+        --text: #101828;
+        --text-secondary: #475467;
+        --text-muted: #98a2b3;
+        --accent: #2563eb;
+        --accent-soft: #eff4ff;
+        --success: #12b76a;
+        --success-soft: #ecfdf3;
+        --danger: #d92d20;
+        --danger-soft: #fef3f2;
+        --warning: #dc6803;
+        --warning-soft: #fffaeb;
+        --overlay: rgba(16, 24, 40, 0.4);
+        --shadow: 0 4px 16px rgba(16, 24, 40, 0.08);
+        --chart-grid: #f2f4f7;
+        --chart-tick: #e4e7ec;
+        --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 4.5L6 7.5L9 4.5' stroke='%23667085' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+      }
+
+      [data-theme="dark"] {
+        color-scheme: dark;
+        --bg: #0b0f14;
+        --surface: #11161d;
+        --surface-muted: #161c24;
+        --border: #232b36;
+        --border-strong: #323c4a;
+        --text: #e8edf3;
+        --text-secondary: #a9b4c2;
+        --text-muted: #6f7b8a;
+        --accent: #6aa5ff;
+        --accent-soft: #14243b;
+        --success: #3ddc97;
+        --success-soft: #0f2a20;
+        --danger: #ff6b6b;
+        --danger-soft: #2a1416;
+        --warning: #f5a524;
+        --warning-soft: #2a200f;
+        --overlay: rgba(0, 0, 0, 0.6);
+        --shadow: 0 4px 18px rgba(0, 0, 0, 0.45);
+        --chart-grid: #1c232c;
+        --chart-tick: #2a323d;
+        --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 4.5L6 7.5L9 4.5' stroke='%23a9b4c2' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+      }
+
       *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
       html, body { height: 100%; overflow: hidden; }
       body {
         font-family: "Inter", "Segoe UI", "Microsoft YaHei", "PingFang SC", sans-serif;
-        background: #f4f5f7;
-        color: #101828;
+        background: var(--bg);
+        color: var(--text);
         -webkit-font-smoothing: antialiased;
         text-rendering: optimizeLegibility;
       }
       #root { height: 100%; }
 
-      button { font-family: inherit; transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, opacity 0.15s ease; }
+      button {
+        font-family: inherit;
+        transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, opacity 0.15s ease;
+      }
       button:hover { opacity: 0.88; }
       button:disabled { opacity: 0.55; cursor: default; }
-      button:focus-visible { outline: 2px solid rgba(37, 99, 235, 0.4); outline-offset: 1px; }
+      button:focus-visible { outline: 2px solid var(--accent-soft); outline-offset: 1px; }
 
       input, select { font-family: inherit; transition: border-color 0.15s ease, box-shadow 0.15s ease; }
       input:focus, select:focus {
         outline: none;
-        border-color: #84adff !important;
-        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+        border-color: var(--accent);
+      }
+      input:focus { box-shadow: 0 0 0 3px var(--accent-soft); }
+
+      select.ui-select {
+        height: 32px;
+        padding: 0 30px 0 10px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        background-color: var(--surface);
+        color: var(--text);
+        font-family: inherit;
+        font-size: 13px;
+        line-height: normal;
+        cursor: pointer;
+        appearance: none;
+        box-sizing: border-box;
+        background-image: var(--select-arrow);
+        background-repeat: no-repeat;
+        background-position: right 9px center;
+        box-shadow: none;
+      }
+      select.ui-select:hover { border-color: var(--border-strong); }
+      select.ui-select:disabled { opacity: 0.55; cursor: default; }
+      select.ui-select:focus-visible {
+        outline: none;
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px var(--accent-soft);
+      }
+      select.ui-select option {
+        background: var(--surface);
+        color: var(--text);
+        font-size: 13px;
+        padding: 6px 8px;
+      }
+
+      /* Chromium 135+：让原生下拉面板也使用同一套视觉语言，不支持时自动回退 */
+      @supports (appearance: base-select) {
+        select.ui-select {
+          appearance: base-select;
+          padding-right: 30px;
+        }
+        select.ui-select::picker(select) {
+          border: 1px solid var(--border);
+          border-radius: 8px;
+          background: var(--surface);
+          box-shadow: var(--shadow);
+          padding: 4px;
+          margin-top: 4px;
+          max-height: 280px;
+        }
+        select.ui-select::picker-icon {
+          display: none;
+        }
+        select.ui-select option {
+          border-radius: 6px;
+          padding: 7px 9px;
+          color: var(--text);
+        }
+        select.ui-select option:hover {
+          background: var(--surface-muted);
+        }
+        select.ui-select option:checked {
+          background: var(--accent-soft);
+          color: var(--accent);
+          font-weight: 500;
+        }
       }
 
       .num { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
 
       ::-webkit-scrollbar { width: 8px; height: 8px; }
       ::-webkit-scrollbar-track { background: transparent; }
-      ::-webkit-scrollbar-thumb { background: #d8dde5; border-radius: 4px; }
-      ::-webkit-scrollbar-thumb:hover { background: #c3c9d3; }
+      ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 4px; }
+      ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
 
       @keyframes toast-in {
         from { opacity: 0; transform: translateY(-4px); }

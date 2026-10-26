@@ -1,21 +1,23 @@
+// 主题色统一走 CSS 变量，切换 light/dark 时无需重渲染组件树
 export const colors = {
-  bg: '#f4f5f7',
-  surface: '#ffffff',
-  surfaceMuted: '#f9fafb',
-  border: '#e4e7ec',
-  borderStrong: '#d0d5dd',
-  text: '#101828',
-  textSecondary: '#475467',
-  textMuted: '#98a2b3',
-  accent: '#2563eb',
-  accentSoft: '#eff4ff',
-  accentBorder: '#b2ccff',
-  success: '#12b76a',
-  successSoft: '#ecfdf3',
-  danger: '#d92d20',
-  dangerSoft: '#fef3f2',
-  warning: '#dc6803',
-  warningSoft: '#fffaeb',
+  bg: 'var(--bg)',
+  surface: 'var(--surface)',
+  surfaceMuted: 'var(--surface-muted)',
+  border: 'var(--border)',
+  borderStrong: 'var(--border-strong)',
+  text: 'var(--text)',
+  textSecondary: 'var(--text-secondary)',
+  textMuted: 'var(--text-muted)',
+  accent: 'var(--accent)',
+  accentSoft: 'var(--accent-soft)',
+  success: 'var(--success)',
+  successSoft: 'var(--success-soft)',
+  danger: 'var(--danger)',
+  dangerSoft: 'var(--danger-soft)',
+  warning: 'var(--warning)',
+  warningSoft: 'var(--warning-soft)',
+  overlay: 'var(--overlay)',
+  shadow: 'var(--shadow)',
 };
 
 export const radius = {
@@ -63,7 +65,7 @@ export const brandMark = {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  color: '#fff',
+  color: colors.bg,
   fontSize: '11px',
   fontWeight: 700,
 };
@@ -86,7 +88,7 @@ export const button = {
     border: '1px solid transparent',
     borderRadius: radius.sm,
     background: colors.text,
-    color: '#ffffff',
+    color: colors.bg,
     cursor: 'pointer',
     fontSize: '13px',
     fontWeight: 500,
@@ -102,40 +104,30 @@ export const button = {
     fontSize: '12px',
     fontWeight: 500,
   },
-  link: {
-    border: 'none',
-    background: 'transparent',
-    padding: 0,
+  icon: {
+    width: '32px',
+    height: '32px',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    border: `1px solid ${colors.border}`,
+    borderRadius: radius.sm,
+    background: colors.surface,
+    color: colors.textSecondary,
     cursor: 'pointer',
-    fontSize: '12px',
-    fontWeight: 500,
-    color: colors.accent,
-  },
-  linkDanger: {
-    border: 'none',
-    background: 'transparent',
     padding: 0,
-    cursor: 'pointer',
-    fontSize: '12px',
-    fontWeight: 500,
-    color: colors.danger,
   },
 };
 
 export const select = {
   height: '32px',
-  padding: '0 28px 0 10px',
+  padding: '0 10px',
   border: `1px solid ${colors.border}`,
   borderRadius: radius.sm,
   background: colors.surface,
   color: colors.text,
   fontSize: '13px',
   cursor: 'pointer',
-  appearance: 'none',
-  backgroundImage:
-    'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'12\' height=\'12\' viewBox=\'0 0 12 12\'%3E%3Cpath d=\'M3 4.5L6 7.5L9 4.5\' stroke=\'%23667085\' stroke-width=\'1.5\' fill=\'none\' stroke-linecap=\'round\' stroke-linejoin=\'round\'/%3E%3C/svg%3E")',
-  backgroundRepeat: 'no-repeat',
-  backgroundPosition: 'right 9px center',
 };
 
 export const dot = (color) => ({
@@ -146,4 +138,22 @@ export const dot = (color) => ({
   flexShrink: 0,
 });
 
-
+// canvas 绘制需要具体色值，不能使用 var()
+export const chartPalettes = {
+  light: {
+    colors: ['#2563eb', '#12b76a', '#f79009', '#7a5af8', '#0ea5e9', '#e11d48', '#14b8a6', '#f97316'],
+    axis: '#98a2b3',
+    grid: '#f2f4f7',
+    tick: '#e4e7ec',
+    cursor: '#98a2b3',
+    selection: 'rgba(37, 99, 235, 0.12)',
+  },
+  dark: {
+    colors: ['#6aa5ff', '#3ddc97', '#f5a524', '#b692f6', '#38bdf8', '#fb7185', '#2dd4bf', '#fdba74'],
+    axis: '#6f7b8a',
+    grid: '#1c232c',
+    tick: '#2a323d',
+    cursor: '#6f7b8a',
+    selection: 'rgba(106, 165, 255, 0.14)',
+  },
+};

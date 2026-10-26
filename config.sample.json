@@ -1,6 +1,6 @@
 {
   "server": {
-    "port": 3000,
+    "port": 3008,
     "lanBind": "0.0.0.0",
     "pollIntervalMs": 100,
     "simulation": false

@@ -1,21 +1,31 @@
 # 依赖
 node_modules/
 
-# 运行时数据
+# 运行时数据（SQLite 历史库）
 data/
 *.db
+*.db-wal
+*.db-shm
 
-# 项目文档已纳入版本管理（docs/）
-# 本地配置（含测试 PLC 地址）
+# 本地配置：包含真实 PLC IP 与现场变量，禁止上传
 config.json
 
 # 构建输出
 frontend/dist/
 dist/
+release/
 
-# 环境
+# 文档与交接材料（仅本地保留）
+docs/
+
+# 环境变量
 .env
 .env.local
+
+# 日志与临时文件
+*.log
+npm-debug.log*
+*.tmp
 
 # IDE
 .vscode/
@@ -26,3 +36,4 @@ dist/
 # 系统
 .DS_Store
 Thumbs.db
+desktop.ini

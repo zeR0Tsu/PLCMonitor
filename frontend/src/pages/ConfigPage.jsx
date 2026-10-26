@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { colors, radius, header, brand, brandMark, button } from '../styles/theme';
+import ThemeToggle from '../components/ThemeToggle';
 
 const styles = {
   container: {
@@ -143,9 +144,9 @@ const styles = {
   },
   formInput: {
     width: '100%',
-    height: '34px',
+    height: '32px',
     padding: '0 10px',
-    border: `1px solid ${colors.borderStrong}`,
+    border: `1px solid ${colors.border}`,
     borderRadius: radius.sm,
     fontSize: '13px',
     color: colors.text,
@@ -155,14 +156,6 @@ const styles = {
   },
   formSelect: {
     width: '100%',
-    height: '34px',
-    padding: '0 10px',
-    border: `1px solid ${colors.borderStrong}`,
-    borderRadius: radius.sm,
-    fontSize: '13px',
-    color: colors.text,
-    outline: 'none',
-    background: colors.surface,
     boxSizing: 'border-box',
   },
   formRow: {
@@ -347,12 +340,11 @@ export default function ConfigPage({ onNavigate }) {
   const saveChart = async () => {
     const isEdit = Boolean(editingItem);
     const chartData = {
-      ...form,
+      title: form.title || '实时数据',
       plcId: form.plcId || selectedPlcId,
       timeWindow: Number(form.timeWindow ?? 30),
-      yAxisMin: form.yAxisMin === '' || form.yAxisMin == null ? '' : Number(form.yAxisMin),
-      yAxisMax: form.yAxisMax === '' || form.yAxisMax == null ? '' : Number(form.yAxisMax),
     };
+    if (!isEdit) chartData.axes = [];
     const resp = await fetch(isEdit ? `/api/charts/${editingItem.id}` : '/api/charts', {
       method: isEdit ? 'PUT' : 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -372,16 +364,6 @@ export default function ConfigPage({ onNavigate }) {
     if (!window.confirm('确定删除该图表布局？')) return;
     await fetch(`/api/charts/${id}`, { method: 'DELETE' });
     await refreshConfig();
-  };
-
-  const toggleChartVariable = (vid) => {
-    setForm((prev) => {
-      const ids = prev.variableIds || [];
-      const newIds = ids.includes(vid)
-        ? ids.filter((id) => id !== vid)
-        : [...ids, vid];
-      return { ...prev, variableIds: newIds };
-    });
   };
 
   if (!config) {
@@ -469,6 +451,7 @@ export default function ConfigPage({ onNavigate }) {
             <div style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
               <label style={{ fontSize: '13px', fontWeight: 500, color: colors.textSecondary }}>选择 PLC：</label>
               <select
+                className="ui-select"
                 style={{ ...styles.formSelect, width: '240px' }}
                 value={selectedPlcId || ''}
                 onChange={(e) => setSelectedPlcId(e.target.value || null)}
@@ -533,6 +516,7 @@ export default function ConfigPage({ onNavigate }) {
             <div style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
               <label style={{ fontSize: '13px', fontWeight: 500, color: colors.textSecondary }}>选择 PLC：</label>
               <select
+                className="ui-select"
                 style={{ ...styles.formSelect, width: '240px' }}
                 value={selectedPlcId || ''}
                 onChange={(e) => setSelectedPlcId(e.target.value || null)}
@@ -626,7 +610,7 @@ export default function ConfigPage({ onNavigate }) {
                 <div style={styles.modalTitle}>{editingItem ? '编辑变量' : '添加变量'}</div>
                 <div style={styles.formGroup}>
                   <label style={styles.formLabel}>所属 PLC</label>
-                  <select style={styles.formSelect} value={form.plcId || ''} onChange={(e) => setForm({ ...form, plcId: e.target.value })}>
+                  <select className="ui-select" style={styles.formSelect} value={form.plcId || ''} onChange={(e) => setForm({ ...form, plcId: e.target.value })}>
                     <option value="">选择 PLC</option>
                     {config.plcs.map((p) => (
                       <option key={p.id} value={p.id}>{p.name} ({p.ip})</option>
@@ -640,13 +624,13 @@ export default function ConfigPage({ onNavigate }) {
                 <div style={styles.formRow}>
                   <div style={styles.formRowItem}>
                     <label style={styles.formLabel}>地址类型</label>
-                    <select style={styles.formSelect} value={form.addressType || 'DB'} onChange={(e) => setForm({ ...form, addressType: e.target.value })}>
+                    <select className="ui-select" style={styles.formSelect} value={form.addressType || 'DB'} onChange={(e) => setForm({ ...form, addressType: e.target.value })}>
                       {ADDRESS_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
                     </select>
                   </div>
                   <div style={styles.formRowItem}>
                     <label style={styles.formLabel}>数据类型</label>
-                    <select style={styles.formSelect} value={form.dataType || 'Real'} onChange={(e) => setForm({ ...form, dataType: e.target.value })}>
+                    <select className="ui-select" style={styles.formSelect} value={form.dataType || 'Real'} onChange={(e) => setForm({ ...form, dataType: e.target.value })}>
                       {DATA_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
                     </select>
                   </div>
@@ -694,56 +678,23 @@ export default function ConfigPage({ onNavigate }) {
                 </div>
                 <div style={styles.formGroup}>
                   <label style={styles.formLabel}>时间窗口</label>
-                  <select style={styles.formSelect} value={form.timeWindow ?? 30} onChange={(e) => setForm({ ...form, timeWindow: parseInt(e.target.value) })}>
+                  <select className="ui-select" style={styles.formSelect} value={form.timeWindow ?? 30} onChange={(e) => setForm({ ...form, timeWindow: parseInt(e.target.value) })}>
                     <option value={30}>30 秒</option>
                     <option value={60}>1 分钟</option>
                     <option value={300}>5 分钟</option>
                     <option value={1800}>30 分钟</option>
                   </select>
                 </div>
-                <div style={styles.formGroup}>
-                  <label style={styles.formLabel}>纵坐标范围</label>
-                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                    <input
-                      style={styles.formInput}
-                      placeholder="最小值（留空自动）"
-                      value={form.yAxisMin ?? ''}
-                      onChange={(e) => setForm({ ...form, yAxisMin: e.target.value })}
-                    />
-                    <span style={{ color: colors.textMuted }}>~</span>
-                    <input
-                      style={styles.formInput}
-                      placeholder="最大值（留空自动）"
-                      value={form.yAxisMax ?? ''}
-                      onChange={(e) => setForm({ ...form, yAxisMax: e.target.value })}
-                    />
-                  </div>
-                  <div style={{ fontSize: '12px', color: colors.textMuted, marginTop: '4px' }}>
-                    两个都填则固定范围；留空则自动适应数据
-                  </div>
-                </div>
-                <div style={styles.formGroup}>
-                  <label style={styles.formLabel}>包含的变量</label>
-                  <div style={{ maxHeight: '200px', overflow: 'auto', border: '1px solid #eee', borderRadius: '6px', padding: '8px' }}>
-                    {config.variables.filter((v) => v.plcId === (selectedPlcId || form.plcId)).map((v) => (
-                      <label key={v.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 0', cursor: 'pointer' }}>
-                        <input
-                          type="checkbox"
-                          checked={(form.variableIds || []).includes(v.id)}
-                          onChange={() => toggleChartVariable(v.id)}
-                        />
-                        <span>{v.name}</span>
-                        <span style={{ color: colors.textMuted, fontSize: '12px' }}>
-                          ({v.addressType}{v.addressType === 'DB' ? ` DB${v.dbNumber}` : ''} +{v.offset})
-                        </span>
-                      </label>
-                    ))}
-                    {config.variables.filter((v) => v.plcId === (selectedPlcId || form.plcId)).length === 0 && (
-                      <div style={{ color: colors.textMuted, fontSize: '13px', textAlign: 'center', padding: '12px' }}>
-                        该 PLC 暂无可用变量，请先在变量管理中添加
-                      </div>
-                    )}
-                  </div>
+                <div style={{
+                  padding: '10px 12px',
+                  border: `1px solid ${colors.border}`,
+                  borderRadius: radius.sm,
+                  backgroundColor: colors.surfaceMuted,
+                  fontSize: '12px',
+                  color: colors.textSecondary,
+                  lineHeight: 1.7,
+                }}>
+                  坐标轴与变量分配请在仪表盘中通过拖拽配置：拖动左侧变量到图表区域可加入同一坐标轴或新建坐标轴，每个坐标轴可单独设置 Y 范围。
                 </div>
                 <div style={styles.modalActions}>
                   <button style={styles.modalBtn} onClick={() => { setShowModal(null); setEditingItem(null); }}>取消</button>

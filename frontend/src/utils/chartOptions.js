@@ -1,12 +1,9 @@
-import { colors, font } from '../styles/theme';
+import { chartPalettes, font } from '../styles/theme';
 
-export const COMMON_COLORS = [
-  '#2563eb', '#12b76a', '#f79009', '#7a5af8',
-  '#0ea5e9', '#e11d48', '#14b8a6', '#f97316',
-];
+const DEFAULT_PALETTE = chartPalettes.light;
 
-export function getCurveColor(chartDef, variableId, index) {
-  return chartDef?.curveColors?.[variableId] || COMMON_COLORS[index % COMMON_COLORS.length];
+export function getCurveColor(chartDef, variableId, index, palette = DEFAULT_PALETTE) {
+  return chartDef?.curveColors?.[variableId] || palette.colors[index % palette.colors.length];
 }
 
 export function formatValue(value) {
@@ -17,9 +14,22 @@ export function formatValue(value) {
   return String(value);
 }
 
-export function createChartOptions(chartDef, variables, timeWindow = 30) {
-  const varMap = new Map(variables.map((v) => [v.id, v]));
-  const variableIds = chartDef.variableIds || [];
+function toNumberOrNull(value) {
+  if (value === '' || value === null || value === undefined) return null;
+  const num = Number(value);
+  return Number.isFinite(num) ? num : null;
+}
+
+/**
+ * 单个坐标轴面板的 uPlot 配置
+ * @param {object} chartDef 图表定义
+ * @param {Array} variables 变量定义
+ * @param {object} axis { variableIds, min, max }
+ * @param {object} palette chartPalettes.light / dark
+ */
+export function createChartOptions(chartDef, variables, axis = {}, palette = DEFAULT_PALETTE) {
+  const varMap = new Map((variables || []).map((v) => [v.id, v]));
+  const variableIds = axis.variableIds || chartDef.variableIds || [];
 
   const series = [
     {
@@ -29,42 +39,36 @@ export function createChartOptions(chartDef, variables, timeWindow = 30) {
   ];
 
   variableIds.forEach((vid, idx) => {
-    const v = varMap.get(vid);
-    const color = getCurveColor(chartDef, vid, idx);
+    const variable = varMap.get(vid);
+    const color = getCurveColor(chartDef, vid, idx, palette);
     series.push({
-      label: v ? `${v.name}${v.unit ? ` (${v.unit})` : ''}` : vid,
+      label: variable ? `${variable.name}${variable.unit ? ` (${variable.unit})` : ''}` : vid,
       scale: 'y',
       stroke: color,
       width: 1.6,
-      fill: variableIds.length === 1 ? `${color}1a` : null,
+      fill: variableIds.length === 1 ? `${color}1f` : null,
       points: { show: false },
       spanGaps: true,
     });
   });
 
-  const yScale = {};
-  const min = chartDef.yAxisMin;
-  const max = chartDef.yAxisMax;
-  const hasMin = min !== undefined && min !== null && min !== '';
-  const hasMax = max !== undefined && max !== null && max !== '';
-  if (hasMin || hasMax) {
-    yScale.range = [
-      hasMin ? Number(min) : null,
-      hasMax ? Number(max) : null,
-    ];
-    yScale.auto = !(hasMin && hasMax);
-  } else {
-    yScale.auto = true;
+  const min = toNumberOrNull(axis.min);
+  const max = toNumberOrNull(axis.max);
+  const yScale = { auto: true };
+  if (min !== null || max !== null) {
+    yScale.range = [min, max];
+    yScale.auto = min === null || max === null;
   }
 
   return {
     width: 800,
-    height: 300,
+    height: 260,
     series,
     legend: { show: false },
     cursor: {
       show: true,
       drag: { x: true, y: false },
+      points: { size: 5, stroke: palette.cursor },
     },
     select: { show: false },
     scales: {
@@ -74,22 +78,23 @@ export function createChartOptions(chartDef, variables, timeWindow = 30) {
     axes: [
       {
         scale: 'x',
-        stroke: colors.textMuted,
+        stroke: palette.axis,
         font: `11px ${font.family}`,
+        incrs: [5, 10, 15, 30, 60, 120, 300, 600, 900, 1800, 3600],
         values: (u, splits) => splits.map((v) =>
           new Date(v * 1000).toLocaleTimeString('zh-CN', { hour12: false })
         ),
-        grid: { stroke: '#f2f4f7', width: 1 },
-        ticks: { stroke: '#e4e7ec', width: 1, size: 4 },
+        grid: { stroke: palette.grid, width: 1 },
+        ticks: { stroke: palette.tick, width: 1, size: 4 },
         size: 34,
       },
       {
         scale: 'y',
-        stroke: colors.textMuted,
+        stroke: palette.axis,
         font: `11px ${font.family}`,
-        grid: { stroke: '#f2f4f7', width: 1 },
-        ticks: { stroke: '#e4e7ec', width: 1, size: 4 },
-        size: 48,
+        grid: { stroke: palette.grid, width: 1 },
+        ticks: { stroke: palette.tick, width: 1, size: 4 },
+        size: 52,
       },
     ],
   };
@@ -110,16 +115,14 @@ export function prepareChartData(bufferData, variableIds, timeWindow = 30) {
     );
     const map = new Map();
     for (const row of rows) {
-      const ms = row.timestamp;
-      map.set(ms, row.value);
-      timeSet.add(ms);
+      map.set(row.timestamp, row.value);
+      timeSet.add(row.timestamp);
     }
     byVariable.set(vid, map);
   }
 
   const timestamps = Array.from(timeSet).sort((a, b) => a - b);
-  const x = timestamps.map((t) => t / 1000);
-  const columns = [x];
+  const columns = [timestamps.map((t) => t / 1000)];
 
   for (const vid of variableIds) {
     const map = byVariable.get(vid);
